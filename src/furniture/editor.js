@@ -5,8 +5,9 @@ import * as THREE from 'three';
 // main.js creates it once and passes in what it needs from the rest of the app.
 
 // lightOf(item): for a piece with its own light (a floor lamp), { state, actions: [{ label, run }] }
-// for its card; null for the rest.
-export function createEditor({ furniture, state, canvas, stage, editor, aim, pickItem, invalidate, setEdit, setFurniture = () => {}, getCamera, announce, W, L, track = (label, p) => p, lightOf = () => null }) {
+// for its card; null for the rest. scoreOf({ pieces, art, pendant }): the layout check of a room
+// (furniture.layoutOf), for the score next to each preset; null for no scores.
+export function createEditor({ furniture, state, canvas, stage, editor, aim, pickItem, invalidate, setEdit, setFurniture = () => {}, getCamera, announce, W, L, track = (label, p) => p, lightOf = () => null, scoreOf = null }) {
   // ---- Editing furniture: select, drag, rotate, undo -----------------------------
   // The stage listens in the capture phase, so grabbing a piece never reaches the
   // camera controls underneath: dragging furniture moves it, dragging elsewhere navigates.
@@ -26,6 +27,9 @@ export function createEditor({ furniture, state, canvas, stage, editor, aim, pic
     stage.setPointerCapture(e.pointerId);
   }, { capture: true });
 
+  // A mouse reports up to a thousand moves a second; the piece is placed once per frame, from
+  // the latest.
+  let dragMove = null;
   stage.addEventListener('pointermove', (e) => {
     if (!drag || e.pointerId !== drag.id) return;
     if (!drag.moving) {
@@ -35,17 +39,38 @@ export function createEditor({ furniture, state, canvas, stage, editor, aim, pic
       remember(drag.item);
       canvas.style.cursor = 'grabbing';
     }
+    if (!dragMove) requestAnimationFrame(() => {
+      const m = dragMove;
+      dragMove = null;
+      if (m && drag && m.pointerId === drag.id) moveTo(m);
+    });
+    dragMove = e;
+  });
+  function moveTo(e) {
     const ray = aim(e).ray;
     // Rays that only graze the floor (pointer near the horizon) hit it far away; ignore them so the piece can't be flung.
     if (Math.abs(ray.direction.y) < 0.08 || !ray.intersectPlane(dragPlane, dragHit)) return;
     furniture.place(drag.item, drag.x + dragHit.x - drag.start.x, drag.z + dragHit.z - drag.start.z);
-  });
+  }
 
   function endDrag(e) {
     if (!drag || e.pointerId !== drag.id) return;
+    if (dragMove && dragMove.pointerId === drag.id) moveTo(dragMove); // the last move, if a frame hasn't come yet
+    dragMove = null;
     if (drag.moving) furniture.save();
     drag = null;
     canvas.style.cursor = e.pointerType === 'mouse' ? 'grab' : '';
+  }
+
+  // A change that loads something (a finish, a model, undo) can fail (offline, a missing file):
+  // the room keeps what it had, the panel is redrawn from that, and the failure is said.
+  function failed(what) {
+    return (err) => {
+      console.warn(`${what} failed:`, err);
+      renderEditor();
+      invalidate();
+      say(`${what} didn't work: ${err?.message ?? err}`);
+    };
   }
   stage.addEventListener('pointerup', endDrag);
   stage.addEventListener('pointercancel', endDrag);
@@ -59,7 +84,7 @@ export function createEditor({ furniture, state, canvas, stage, editor, aim, pic
     const items = [].concat(item);
     if (run && items.length === 1 && nudging?.item === item && nudging.run === run) return;
     nudging = run && items.length === 1 ? { item, run } : null;
-    history.push(items.map((it) => furniture.snapshot(it)));
+    history.push({ snapshots: items.map((it) => furniture.snapshot(it)), hang: furniture.hang });
     if (history.length > 50) history.shift();
     renderEditor();
   }
@@ -68,12 +93,13 @@ export function createEditor({ furniture, state, canvas, stage, editor, aim, pic
     const last = history.pop();
     if (!last) return;
     nudging = null;
-    if (furniture.selected && last.some((s) => s.item === furniture.selected && !s.present)) selectItem(null);
-    Promise.all(last.map((s) => furniture.restore(s))).then(() => {
+    if (furniture.selected && last.snapshots.some((s) => s.item === furniture.selected && !s.present)) selectItem(null);
+    furniture.setHang(last.hang, { save: false });
+    Promise.all(last.snapshots.map((s) => furniture.restore(s))).then(() => {
       renderEditor();
       invalidate();
       say('Undone');
-    });
+    }, failed('Undo'));
     renderEditor();
   }
 
@@ -372,7 +398,7 @@ export function createEditor({ furniture, state, canvas, stage, editor, aim, pic
       invalidate();
       const g = furniture.optionGroups(item).find((x) => x.id === groupId);
       say(`${item.home.label}: ${g?.label ?? groupId} ${g?.choice?.name ?? ''}`);
-    });
+    }, failed('The finish'));
     renderEditor();
   }
 
@@ -389,7 +415,7 @@ export function createEditor({ furniture, state, canvas, stage, editor, aim, pic
         renderEditor();
         invalidate();
         say(`${item.home.label}: now the ${item.spec.maker} ${item.spec.name}`);
-      });
+      }).catch(failed('The model'));
     });
     return el('div', { class: 'ed-group', 'data-group': 'model' },
       el('div', { class: 'ed-group-head' }, el('span', { class: 'ed-group-label', id: 'ed-g-model' }, 'Model')),
@@ -419,7 +445,8 @@ export function createEditor({ furniture, state, canvas, stage, editor, aim, pic
   }, el('span', { class: 'preset-dots', 'aria-hidden': 'true' }),
   el('span', { class: 'preset-text' },
     maker && el('span', { class: 'preset-maker' }, maker),
-    el('span', { class: 'preset-name' }, name), el('span', { class: 'preset-sum' }, summary)));
+    el('span', { class: 'preset-name' }, name), el('span', { class: 'preset-sum' }, summary)),
+  el('span', { class: 'preset-score', hidden: true }));
   const fullName = (p) => (p.maker ? `${p.maker} ${p.name}` : p.name);
   // The presets come with the catalog (assets/catalog/presets.json), so the list is built once it
   // has loaded; until then it shows placeholders.
@@ -457,7 +484,7 @@ export function createEditor({ furniture, state, canvas, stage, editor, aim, pic
     const id = linkedPreset();
     if (id && id !== linkShown) pickPreset(id);
   });
-  let custom = null; // every piece's snapshot, taken when a look replaced a room that matched none
+  let custom = null; // { snapshots, hang }: every piece and the pendant, taken when a look replaced a room that matched none
   let applying = null, queued = null; // the look being applied, and the latest one picked meanwhile
   const piecesOf = (snapshots) => Object.fromEntries(snapshots.map((s) => [s.item.id, { item: s.key, choices: s.choices }]));
 
@@ -488,13 +515,14 @@ export function createEditor({ furniture, state, canvas, stage, editor, aim, pic
     }
     if (!preset && !custom) return;
     remember(furniture.items);
-    if (!current) custom = furniture.items.map((it) => furniture.snapshot(it));
-    const target = preset ? null : new Map(custom.map((s) => [s.item, s]));
+    if (!current) custom = { snapshots: furniture.items.map((it) => furniture.snapshot(it)), hang: furniture.hang };
+    const target = preset ? null : new Map(custom.snapshots.map((s) => [s.item, s]));
     const leaving = piece() && (preset ? furniture.presetFor(preset, piece())?.present === false : !target.get(piece()).present);
     if (leaving) selectItem(null);
     setFurniture(true);
     applying = id;
     renderEditor(); // the presets, and Undo off until it's done
+    if (!preset) furniture.setHang(custom.hang, { save: false });
     const work = preset ? furniture.applyPreset(id) : Promise.all([...target.values()].map((s) => furniture.restore(s)));
     track(preset ? `Applying ${preset.name}` : 'Going back to your changes', work)
       .catch((err) => console.error(err))
@@ -535,11 +563,50 @@ export function createEditor({ furniture, state, canvas, stage, editor, aim, pic
     // The looks' colours once; Custom's whenever the pieces it shows change.
     if (!painted) for (const p of furniture.presets) paint(presetList.querySelector(`[data-preset="${p.id}"]`), p.pieces);
     painted = true;
+    renderScores(matched);
     if (customRow.hidden) return;
-    const pieces = piecesOf(matched === '' ? furniture.items.map((it) => furniture.snapshot(it)) : custom ?? []);
+    const pieces = piecesOf(matched === '' ? furniture.items.map((it) => furniture.snapshot(it)) : custom?.snapshots ?? []);
     const key = JSON.stringify(pieces);
     if (key !== customKey) paint(customRow.firstChild, pieces);
     customKey = key;
+  }
+
+  // The layout check's score next to each preset (and Custom), from the room each would make
+  // (furniture.layoutOf, scoreOf). Worked out in idle time, one preset at a time, and kept until
+  // the room changes.
+  let scoreKey = '', scoreToken = 0;
+  const idle = window.requestIdleCallback ?? ((fn) => setTimeout(fn, 16));
+  function renderScores(matched) {
+    if (!scoreOf || !customRow) return;
+    const key = furniture.stateKey() + JSON.stringify([matched, custom?.hang, custom?.snapshots?.map((s) => [s.item.id, s.key, s.present, s.x, s.z, s.rotation])]);
+    if (key === scoreKey) return;
+    scoreKey = key;
+    const token = ++scoreToken;
+    const jobs = furniture.presets.map((p) => [presetList.querySelector(`[data-preset="${p.id}"] .preset-score`), () => scoreOf({ ...furniture.layoutOf(p), pendant: p.pendant ?? null })]);
+    // Custom: the viewer's own room, kept aside while a preset shows, or the room as it is now.
+    jobs.push([customRow.querySelector('.preset-score'), () => (custom ? scoreOf({ ...furniture.layoutOf(null, custom.snapshots), pendant: custom.hang }) : matched === '' ? scoreOf({ pieces: furniture.floorPieces(), art: furniture.wallArt(), pendant: furniture.hang }) : null)]);
+    const next = () => {
+      if (token !== scoreToken) return;
+      const job = jobs.shift();
+      if (!job) return;
+      const [pill, run] = job;
+      if (pill) {
+        let r = null;
+        try {
+          r = run();
+        } catch (err) {
+          console.warn('Layout check failed for a preset:', err);
+        }
+        pill.hidden = !r;
+        if (r) {
+          pill.textContent = `${r.score}/${r.total}`;
+          pill.title = `Layout check: ${r.score} of ${r.total} rules met`;
+          pill.setAttribute('aria-label', `Layout check ${r.score} of ${r.total}`);
+        }
+      }
+      idle(next);
+    };
+    idle(next);
   }
 
   // Arrow keys nudge relative to the screen: ↑ moves the piece away from you along
@@ -611,12 +678,12 @@ export function createEditor({ furniture, state, canvas, stage, editor, aim, pic
   document.getElementById('ed-default').addEventListener('click', () => {
     const item = furniture.selected;
     remember(item);
-    furniture.resetOptions(item).then(renderEditor);
+    furniture.resetOptions(item).then(renderEditor, failed('The default finish'));
   });
   document.getElementById('ed-apply-all').addEventListener('click', () => {
     const item = furniture.selected;
     remember(furniture.copies(item).filter((c) => c !== item));
-    furniture.applyToCopies(item).then(renderEditor);
+    furniture.applyToCopies(item).then(renderEditor, failed('Apply to all'));
   });
   document.getElementById('sel-remove').addEventListener('click', () => {
     const item = furniture.selected;
@@ -632,7 +699,7 @@ export function createEditor({ furniture, state, canvas, stage, editor, aim, pic
     furniture.setMatching(item, e.target.checked).then(() => {
       renderEditor();
       invalidate();
-    });
+    }, failed('Match the sofa'));
   });
   window.addEventListener('resize', () => renderPopup(furniture.selected));
   finishPanel.addEventListener('toggle', fitEditor);

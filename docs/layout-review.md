@@ -1,5 +1,20 @@
 # Layout review: feng shui, interior design and yoga
 
+> **Update, after a second review.** The ranking below was revised before the layouts went into the
+> planner. Layout 1, "Table under the light", was dropped: it won only because the pendant then
+> worked without touching it, and a swag hook moves a pendant for next to nothing; with the table in
+> the middle the room reads as a canteen and the sofa sits in the darkest corner facing a blank wall.
+> Layout 3, "Dining at the window", is now the recommended one, in a revised form: the sofa stands
+> at the entry end of the left wall with the floor lamp in the corner behind its door-end arm, the
+> dining table 15 cm from the window, and
+> the **practice zone lies across the open middle of the room between the chairs and the sofa**,
+> head to the left wall, out of the door lane, with the pendant swagged over the dining table (the
+> preset does that). The planner now scores every layout with the rules in this review (the
+> "Layout check" in the room card and next to each preset): the recommended layout meets all eight,
+> "Everything on the left wall" six, "Sofa facing the view" four. The zone requirement for a mat
+> with its head at a wall is 1.4 m along the wall (30 cm either side of the mat), 1.6 m for a
+> free-standing mat: the middle of this room is 1.4 m deep between the dining table and the sofa.
+
 A review of where the furniture stands in the living room, for a room that is also a yoga studio
 almost every day, and four layouts to offer as presets. Every layout was placed in the planner
 (through `roomApp.furniture`, with temporary presets that were not saved to the catalog), checked

@@ -189,6 +189,7 @@ try {
   // Presets: each one picked from the panel is the one the room then shows, ticked and in the
   // link, whatever was picked before it (a finish one preset sets mustn't stay for the next).
   const presetIds = await run('roomApp.furniture.presets.map((p) => p.id)');
+  const shots = new Set();
   for (const pid of [...presetIds, presetIds[0]]) {
     await run(`document.querySelector('#presets-list [data-preset="${pid}"]').click()`);
     const shown = await run(`(async () => {
@@ -199,6 +200,10 @@ try {
       return (roomApp.furniture.currentPreset() ?? 'Custom') + ' ' + location.hash;
     })()`);
     if (shown !== true) problems.push(`presets: picking ${pid} shows ${shown}`);
+    if (!shots.has(pid)) {
+      shots.add(pid);
+      await shot(`preset-${pid}`);
+    }
   }
 
   // Settings: the gear opens a labelled dialog with focus inside; Esc closes it and focus goes
@@ -233,6 +238,61 @@ try {
   await run("document.getElementById('settings-q-auto').click()");
   await key('Escape');
   await run('roomApp.quality.set("high")');
+
+  // The layout check: a score in the room card's title line; open, the eight rules, and the
+  // practice zone drawn on the floor; a score next to every preset, the same as the card's once
+  // that preset is applied; the layouts ranked as the review's update says.
+  const cardScore = () => run("document.getElementById('check-score').textContent");
+  if (!/^\d\/\d$/.test(await cardScore())) problems.push(`layout check: the card's score reads "${await cardScore()}"`);
+  await run("document.getElementById('card-toggle').click()");
+  await sleep(400);
+  const rules = await run("document.querySelectorAll('#check-list .check').length");
+  if (rules !== 8) problems.push(`layout check: ${rules} rules listed, not 8`);
+  if (!(await run("roomApp.scene.getObjectByName('layout check').visible"))) problems.push('layout check: the zone is not drawn while the card is open');
+  await shot('layout-check');
+  await run("document.getElementById('card-toggle').click()");
+  if (await run("roomApp.scene.getObjectByName('layout check').visible")) problems.push('layout check: the zone stayed on the floor after the card closed');
+  await until("roomApp.furniture.presets.every((p) => { const s = document.querySelector('#presets-list [data-preset=' + JSON.stringify(p.id) + '] .preset-score'); return s && !s.hidden && /\\d\\/\\d/.test(s.textContent); })", "the presets' scores", 15000);
+  const pills = await run("Object.fromEntries([...document.querySelectorAll('#presets-list [data-preset]')].map((b) => [b.dataset.preset, b.querySelector('.preset-score')?.textContent]))");
+  const layouts = ['layout-window-dining', 'layout-one-wall', 'layout-view-sofa'];
+  for (const pid of layouts) {
+    await run(`document.querySelector('#presets-list [data-preset="${pid}"]').click()`);
+    await until(`roomApp.furniture.currentPreset() === '${pid}'`, `${pid} to apply`);
+    await sleep(500);
+    if ((await cardScore()) !== pills[pid]) problems.push(`layout check: ${pid} scores ${pills[pid]} in the list but ${await cardScore()} in the card`);
+  }
+  const score = (pid) => Number(pills[pid]?.split('/')[0]);
+  if (!(score(layouts[0]) > score(layouts[1]) && score(layouts[1]) > score(layouts[2]))) problems.push(`layout check: the layouts rank ${JSON.stringify(pills)}`);
+  // The recommended layout swags the pendant over the dining table; the default hangs it from the outlet again.
+  await run(`document.querySelector('#presets-list [data-preset="${layouts[0]}"]').click()`);
+  await until(`roomApp.furniture.currentPreset() === '${layouts[0]}'`, 'the recommended layout');
+  if ((await run('JSON.stringify(roomApp.pendant.hang)')) === 'null') problems.push('layout: the recommended preset did not swag the pendant');
+  await run("document.getElementById('card-toggle').click()");
+  await shot('layout-window-dining');
+  await run("document.getElementById('card-toggle').click()");
+  await run(`document.querySelector('#presets-list [data-preset="${presetIds[0]}"]').click()`);
+  await until(`roomApp.furniture.currentPreset() === '${presetIds[0]}'`, 'the default preset again');
+  if ((await run('JSON.stringify(roomApp.pendant.hang)')) !== 'null') problems.push('layout: the pendant stayed swagged after the default preset');
+
+  // Fast picking: the bounds trees are built in idle time once three-mesh-bvh has loaded.
+  await run('roomApp.furniture.fastPicking');
+  await until("roomApp.furniture.items.some((i) => i.meshes?.some((m) => m.geometry.boundsTree))", 'the picking bounds trees', 20000);
+
+  // The Sun switch: one tap is evening (after dusk, the ceiling light on by itself), the next is
+  // day; its chevron opens the time-of-day panel (a dialog, the slider focused), Esc closes it.
+  await run("document.getElementById('sun-button').click()");
+  await sleep(600);
+  const evening = await run("({ pressed: document.getElementById('sun-button').getAttribute('aria-pressed'), lamp: roomApp.lighting.lampOn, time: document.getElementById('sun-time').value })");
+  if (evening.pressed !== 'true' || !evening.lamp) problems.push(`sun: the switch did not make it evening ${JSON.stringify(evening)}`);
+  await shot('sun-evening');
+  await run("document.getElementById('sun-button').click()");
+  await sleep(300);
+  if ((await run("document.getElementById('sun-time').value")) !== '13') problems.push('sun: the switch did not go back to day');
+  await run("document.getElementById('sun-more').click()");
+  const sunDialog = await run("(() => { const p = document.getElementById('sun-panel'); return { hidden: p.hidden, role: p.getAttribute('role'), focus: document.activeElement?.id, expanded: document.getElementById('sun-more').getAttribute('aria-expanded') }; })()");
+  if (sunDialog.hidden || sunDialog.role !== 'dialog' || sunDialog.focus !== 'sun-time' || sunDialog.expanded !== 'true') problems.push(`sun: panel ${JSON.stringify(sunDialog)}`);
+  await key('Escape');
+  if (!(await run("document.getElementById('sun-panel').hidden"))) problems.push('sun: Esc did not close the panel');
 
   // Diagnostics: a lost WebGL context shows the panel; when it's restored the panel goes and the
   // room is drawn again. (The browser's own context-lost messages are expected here.)

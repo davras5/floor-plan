@@ -31,7 +31,8 @@ export function createFixtures({ room, curtains, pendant, lighting, R, onChange 
       size: { w: R.pendant.width, d: R.pendant.width, h: R.pendant.height },
       state: () => {
         const on = lighting.lampOn ? 'On' : 'Off';
-        return lighting.lampMode === 'auto' ? `${on} · automatic, on after sunset` : `${on} · switched by hand`;
+        const hung = pendant.hang ? ' · swagged from a ceiling hook' : '';
+        return (lighting.lampMode === 'auto' ? `${on} · automatic, on after sunset` : `${on} · switched by hand`) + hung;
       },
       actions: () => {
         const on = lighting.lampOn; // what the button says is what it does, even if the card is old

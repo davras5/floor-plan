@@ -180,15 +180,43 @@
   .room-text button:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
   .card .note { margin: 6px 0 0; font-size: 12px; line-height: 1.4; color: var(--ink-soft); }
   .card code { font: 500 11px var(--font-num); color: var(--ink); }
-  .card .sun { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12px; color: var(--ink-soft); }
-  .card .sun label { font-weight: 600; color: var(--ink); }
-  .card .sun input[type="range"] { flex: 1; min-width: 0; height: 24px; margin: 0; accent-color: var(--accent); }
-  .card .sun output { font: 500 12px var(--font-num); font-variant-numeric: tabular-nums; color: var(--ink); min-width: 5.5ch; }
-  .card .sun select { font: 500 12px var(--font-ui); color: var(--ink); background: transparent; border: 1px solid var(--panel-edge); border-radius: 6px; padding: 3px 4px; }
-  .card .sun :focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
-  .card .attribution { font-size: 11px; }
-  .card .attribution a { color: inherit; }
-  .card .attribution a:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .attribution { font-size: 11px; }
+  .attribution a { color: inherit; }
+  .attribution a:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+  /* The layout check (src/ui/layout-card.js): the score in the title line; when the card is open,
+     each rule with a mark (a check, a bang, a cross: not colour alone) and its reason. */
+  .card h1 { display: flex; align-items: center; gap: 8px; }
+  .score, .preset-score {
+    flex: none;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--ink) 8%, transparent);
+    color: var(--ink);
+    font: 600 11px/1.3 var(--font-num);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .check-section h2 { margin: 8px 0 5px; font: 600 10px/1.2 var(--font-ui); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
+  .check-list { display: grid; gap: 5px; margin: 0; padding: 0; list-style: none; }
+  .check { display: flex; gap: 8px; font-size: 12px; line-height: 1.35; }
+  .check-mark {
+    flex: none;
+    width: 16px;
+    height: 16px;
+    margin-top: 1px;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--ink) 10%, transparent);
+    color: var(--ink);
+    font: 700 10px/16px var(--font-ui);
+    text-align: center;
+  }
+  .check-pass .check-mark { background: #3f9d63; color: #fff; }
+  .check-warn .check-mark { background: var(--accent); color: var(--accent-ink); }
+  .check-fail .check-mark { background: #d0483f; color: #fff; }
+  .check-label { font-weight: 600; }
+  .check-label::after { content: " · "; font-weight: 400; color: var(--ink-soft); }
+  .check-reason { color: var(--ink-soft); }
+  .check-tag { background: rgba(255, 252, 246, 0.85); }
 
   /* Presets: whole-room looks, one tap each (None: the empty room). Folds to
      "Presets · <current>" like the room card. */
@@ -265,6 +293,7 @@
   .preset-maker { font: 600 9.5px/1.3 var(--font-ui); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
   .preset-name { font: 600 13px/1.25 var(--font-ui); }
   .preset-sum { font-size: 11.5px; line-height: 1.3; color: var(--ink-soft); }
+  .preset .preset-score { margin-left: auto; }
   /* The chosen look shows a check as well as the tint (not colour alone). */
   .preset::after {
     content: "";
@@ -589,7 +618,8 @@
   @media (pointer: coarse) {
     .group button { min-height: 44px; min-width: 44px; }
     select, input, textarea { font-size: 16px !important; }
-    .card .sun input[type="range"] { height: 44px; }
+    .sun-panel .sun-row input[type="range"] { height: 44px; }
+    .group .sun-more { min-width: 36px; }
     .card-toggle { width: 44px; height: 44px; }
     #presets-toggle { min-height: 44px; }
     .preset { min-height: 48px; }
@@ -631,6 +661,40 @@
   .gear svg { display: block; transition: transform 0.2s; }
   .gear[aria-expanded="true"] { color: var(--ink); background: color-mix(in srgb, var(--accent) 22%, transparent); }
   .gear[aria-expanded="true"] svg { transform: rotate(30deg); }
+  /* The Sun switch (src/ui/sun.js): day or evening in one tap. Its icon says which (a sun, a moon)
+     as well as the tint. The chevron opens the time-of-day panel; the narrowest phones hide it, to
+     keep the toolbar one row (a long press on the switch opens the panel there). */
+  .sun-group { gap: 0; }
+  .group .sun { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px 7px 10px; }
+  .sun .sun-icon { display: block; }
+  .sun .sun-night, .sun[aria-pressed="true"] .sun-day { display: none; }
+  .sun[aria-pressed="true"] .sun-night { display: block; }
+  .sun[aria-pressed="true"] { color: var(--ink); background: color-mix(in srgb, var(--accent) 22%, transparent); }
+  .group .sun-more { position: relative; width: 26px; min-width: 0; padding: 0; }
+  .sun-more::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 6px;
+    height: 6px;
+    border: solid currentColor;
+    border-width: 0 1.6px 1.6px 0;
+    transform: translate(-50%, -70%) rotate(45deg);
+  }
+  .sun-more[aria-expanded="true"] { color: var(--ink); background: color-mix(in srgb, var(--accent) 22%, transparent); }
+  .group button:disabled { opacity: 0.45; cursor: default; }
+  @media (max-width: 420px) {
+    .sun .sun-label, .sun-more { display: none; }
+    .group .sun { padding: 7px 9px; }
+  }
+  .sun-panel .sun-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 12px; color: var(--ink-soft); }
+  .sun-panel .sun-row label { font-weight: 600; color: var(--ink); }
+  .sun-panel .sun-row input[type="range"] { flex: 1; min-width: 0; height: 24px; margin: 0; accent-color: var(--accent); }
+  .sun-panel .sun-row output { font: 500 12px var(--font-num); font-variant-numeric: tabular-nums; color: var(--ink); min-width: 5.5ch; }
+  .sun-panel .sun-row select { font: 500 12px var(--font-ui); color: var(--ink); background: transparent; border: 1px solid var(--panel-edge); border-radius: 6px; padding: 3px 4px; }
+  .sun-panel .sun-row :focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .sun-panel .attribution { margin: 8px 0 0; }
   /* The settings panel (src/ui/settings.js): a small dialog placed next to the gear, wherever
      that is. It lives at the end of <body>, above the panels and the info card. */
   .settings-panel {
@@ -732,7 +796,7 @@
     .diag-details summary { padding: 12px 0; }
   }
   @media (prefers-reduced-motion: reduce) { .gear svg { transition: none; } }
-  @media (forced-colors: active) { .settings-option:has(input:checked), .gear[aria-expanded="true"] { outline: 2px solid CanvasText; } }
+  @media (forced-colors: active) { .settings-option:has(input:checked), .gear[aria-expanded="true"], .sun[aria-pressed="true"], .sun-more[aria-expanded="true"] { outline: 2px solid CanvasText; } }
 
   /* Dimension labels (CSS2DRenderer positions them; don't set transform here). */
   .dim {
@@ -829,7 +893,8 @@
 {
   "imports": {
     "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js",
-    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/",
+    "three-mesh-bvh": "https://cdn.jsdelivr.net/npm/three-mesh-bvh@0.9.16/build/index.module.js"
   }
 }
 </script>
@@ -871,34 +936,36 @@
 <link rel="modulepreload" href="./src/ui/loading.js">
 <link rel="modulepreload" href="./src/ui/settings.js">
 <link rel="modulepreload" href="./src/ui/diagnostics.js">
+<link rel="modulepreload" href="./src/ui/popover.js">
+<link rel="modulepreload" href="./src/ui/sun.js">
+<link rel="modulepreload" href="./src/ui/layout-card.js">
+<link rel="modulepreload" href="./src/furniture/layout-check.js">
+<link rel="modulepreload" href="./src/scene/layout-overlay.js">
 <link rel="preload" href="assets/catalog/products.json" as="fetch" crossorigin>
 <link rel="preload" href="assets/catalog/presets.json" as="fetch" crossorigin>
 <link rel="preload" href="assets/surroundings/site.json" as="fetch" crossorigin>
 </head>
 <body>
 <div class="top" id="top">
+<!-- The room card: folded to its title line (the room's size and the layout check's score); open,
+     the layout check (src/ui/layout-card.js) with a reason per rule, drawn on the floor meanwhile. -->
 <header class="card" id="info">
   <div class="card-head">
     <div class="card-titles">
-      <h1>Living room</h1>
+      <h1>Living room <span class="score" id="check-score" hidden></span></h1>
       <p class="figures" id="figures">4.10 × 5.30 m</p>
     </div>
-    <button type="button" class="card-toggle" id="card-toggle" aria-expanded="true" aria-controls="card-body">
-      <span class="sr-only">Room details and sun</span>
+    <button type="button" class="card-toggle" id="card-toggle" aria-expanded="false" aria-controls="card-body">
+      <span class="sr-only">Layout check and room details</span>
     </button>
   </div>
-  <div class="card-body" id="card-body">
+  <div class="card-body" id="card-body" hidden>
+    <section class="check-section" aria-labelledby="check-title">
+      <h2 id="check-title">Layout check</h2>
+      <ul class="check-list" id="check-list"></ul>
+      <p class="note">The layout review's rules: a commanding seat, clear doors and lane, head room, dining clearances, and a yoga practice zone with a free wall. The zone and the line between the doors are drawn on the floor while this is open.</p>
+    </section>
     <p class="note">Tap a piece to see what it is. Turn on Edit to move it or change its finish. Room sizes are estimated from photos.</p>
-    <div class="sun" id="sun-controls" hidden>
-      <label for="sun-time">Sun</label>
-      <input type="range" id="sun-time" min="6" max="23" step="0.25" value="13" aria-valuetext="13:00">
-      <output id="sun-label" for="sun-time" aria-hidden="true">13:00</output>
-      <select id="sun-month" aria-label="Month">
-        <option value="0">Jan</option><option value="1">Feb</option><option value="2">Mar</option><option value="3">Apr</option>
-        <option value="4">May</option><option value="5">Jun</option><option value="6">Jul</option><option value="7">Aug</option>
-        <option value="8">Sep</option><option value="9">Oct</option><option value="10">Nov</option><option value="11">Dec</option>
-      </select>
-    </div>
     <p class="note attribution" id="attribution" hidden>Surroundings and sun from real data · <a href="https://www.swisstopo.admin.ch" target="_blank" rel="noopener">© swisstopo</a></p>
   </div>
 </header>
@@ -980,6 +1047,16 @@
   <div class="group" role="group" aria-label="Editing">
     <button type="button" class="primary" id="toggle-edit" aria-pressed="false" title="Move furniture and change its finish">Edit</button>
   </div>
+  <!-- The Sun (src/ui/sun.js): one tap switches day and evening; the chevron (or a long press on
+       phones, where it's hidden) opens the panel with the time of day and the month. -->
+  <div class="group sun-group" role="group" aria-label="Sun">
+    <button type="button" class="sun" id="sun-button" aria-pressed="false" disabled title="Loading the neighbourhood and the sun…">
+      <svg class="sun-icon sun-day" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4.2" fill="currentColor"/><g stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></g></svg>
+      <svg class="sun-icon sun-night" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><path fill="currentColor" d="M14.5 2.5a9.5 9.5 0 1 0 7 13.2A8 8 0 0 1 14.5 2.5z"/></svg>
+      <span class="sun-label">Evening</span>
+    </button>
+    <button type="button" class="sun-more" id="sun-more" aria-label="Time of day and month" title="Time of day and month" disabled></button>
+  </div>
   <!-- Settings (src/ui/settings.js builds the panel and places it next to this button, wherever
        it sits): show measurements, rendering quality. The light, doors, window and curtains are
        set from their info cards; the furniture from the Presets panel (None for the empty room). -->
@@ -989,6 +1066,26 @@
     </button>
   </div>
 </div>
+
+<!-- The sun panel (src/ui/sun.js): the time of day and the month, for the real sun at that moment. -->
+<section id="sun-panel" class="settings-panel sun-panel" role="dialog" aria-modal="false" aria-labelledby="sun-title" hidden>
+  <div class="settings-head">
+    <h2 id="sun-title">Sun</h2>
+    <button type="button" class="settings-close" aria-label="Close" title="Close (Esc)">×</button>
+  </div>
+  <div class="sun-row" id="sun-controls">
+    <label for="sun-time">Time</label>
+    <input type="range" id="sun-time" min="6" max="23" step="0.25" value="13" aria-valuetext="13:00">
+    <output id="sun-label" for="sun-time" aria-hidden="true">13:00</output>
+    <select id="sun-month" aria-label="Month">
+      <option value="0">Jan</option><option value="1">Feb</option><option value="2">Mar</option><option value="3">Apr</option>
+      <option value="4">May</option><option value="5">Jun</option><option value="6">Jul</option><option value="7">Aug</option>
+      <option value="8">Sep</option><option value="9">Oct</option><option value="10">Nov</option><option value="11">Dec</option>
+    </select>
+  </div>
+  <p class="settings-now">Where the sun really is over the flat, on the 21st of the month. After sunset the ceiling light comes on by itself.</p>
+  <p class="note attribution" hidden>Surroundings and sun from real data · <a href="https://www.swisstopo.admin.ch" target="_blank" rel="noopener">© swisstopo</a></p>
+</section>
 
 <!-- First load: until the room's first frame. -->
 <div id="loading" role="status"><span class="spinner" aria-hidden="true"></span><span>Building the room…</span></div>

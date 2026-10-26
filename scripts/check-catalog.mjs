@@ -5,10 +5,12 @@
 //   - pieces: products and alternatives exist, one placement rule, references to earlier pieces;
 //     art hangs on a wall (movable: false, a height, its back on the wall it turns from)
 //   - presets: unique ids, pieces and products that exist, every choice an option of that
-//     product that is sold (not `offered: false`), placements well formed
+//     product that is sold (not `offered: false`), placements well formed, a swagged pendant
+//     inside the room at a sensible height
 // Run by `npm test`; prints every problem and exits 1 if there are any.
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { ROOM } from '../src/config.js';
 
 const root = resolve(import.meta.dirname, '..');
 const read = (path) => JSON.parse(readFileSync(resolve(root, path), 'utf8'));
@@ -132,6 +134,11 @@ for (const preset of presets) {
   }
   const listed = (preset.maker ?? '').split(' · ').filter(Boolean);
   if (listed.sort().join() !== [...makers].sort().join()) fail(at, `maker "${preset.maker ?? ''}" should be "${[...makers].join(' · ')}"`);
+  if (preset.pendant) {
+    const { x, z, bottom = ROOM.pendant.bottom } = preset.pendant;
+    if (!(x > 0 && x < ROOM.width && z > 0 && z < ROOM.length)) fail(at, `pendant hook (${x}, ${z}) is outside the room`);
+    if (!(bottom >= 1.2 && bottom <= ROOM.height - ROOM.pendant.height - 0.1)) fail(at, `pendant bottom ${bottom} m: between 1.2 m and what the cord and shade allow`);
+  }
   for (const [key, entry] of Object.entries(preset.pieces)) {
     // A piece id, or a product id for every piece of that product.
     const targets = pieceIds.has(key) ? pieces.filter((p) => p.id === key) : pieces.filter((p) => p.product === key);

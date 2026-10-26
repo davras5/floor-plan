@@ -31,6 +31,7 @@
       "url": "https://www.muuto.com/product/In-Situ-Modular-Sofa-2-Seater-Configurations--IS2SC7/",
       "itemUrl": "https://www.muuto.com/product/In-Situ-Modular-Sofa-2-Seater-Configurations--IS2SC7/{item}/",
       "size": {"width": 2.16, "depth": 1.69, "height": 0.7},
+      "seatDepth": 1.02,
       "finish": "Clay 12, black frame",
       "options": "assets/furniture/muuto-in-situ-2-seater-7/options.json",
       "model": {
@@ -105,7 +106,7 @@
         "file": "assets/furniture/muuto-outline-soft-2-seater/standard.obj",
         "scale": 0.001,
         "parts": "outline",
-        "variants": {"castors": {"file": "assets/furniture/muuto-outline-soft-2-seater/castors.obj", "scale": 0.001}}
+        "variants": {"castors": {"file": "assets/furniture/muuto-outline-soft-2-seater/castors.obj", "scale": 0.001, "size": {"width": 1.7, "depth": 0.93, "height": 0.8}}}
       }
     },
     "muuto-outline-soft-3-seater": {
@@ -121,7 +122,7 @@
         "file": "assets/furniture/muuto-outline-soft-3-seater/standard.obj",
         "scale": 0.001,
         "parts": "outline",
-        "variants": {"castors": {"file": "assets/furniture/muuto-outline-soft-3-seater/castors.obj", "scale": 0.001}}
+        "variants": {"castors": {"file": "assets/furniture/muuto-outline-soft-3-seater/castors.obj", "scale": 0.001, "size": {"width": 2.2, "depth": 0.93, "height": 0.8}}}
       }
     },
     "muuto-outline-pouf": {

@@ -12,7 +12,7 @@ import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 //            source, model: { file, scale, parts }, variants }, with each part's `match` a RegExp
 //   LAYOUT   the pieces: { id, label, item (product id), alternatives, present, optional, match,
 //            movable, rotation, and one of place / attach / around }
-//   PRESETS  [{ id, name, summary, note, pieces: { piece or product id: { item, present, choices, place } } }]
+//   PRESETS  [{ id, name, summary, note, pendant?, pieces: { piece or product id: { item, present, choices, place } } }]
 const CATALOG_FILES = { products: 'assets/catalog/products.json', presets: 'assets/catalog/presets.json' };
 let CATALOG = {}, LAYOUT = [], PRESETS = [], PALETTE = [], DEFAULT_PRESET = null, signature = '';
 
@@ -20,7 +20,7 @@ async function loadCatalog() {
   const get = (path) => fetch(path).then((r) => (r.ok ? r.json() : Promise.reject(new Error(`${path}: ${r.status}`))));
   const [{ products, partSets = {} }, room] = await Promise.all([get(CATALOG_FILES.products), get(CATALOG_FILES.presets)]);
   const partsOf = (parts) => (typeof parts === 'string' ? partSets[parts] : parts)?.map((part) => ({ ...part, match: new RegExp(part.match) }));
-  const modelOf = (m, base) => ({ file: m.file, scale: m.scale ?? base?.scale ?? 1, parts: partsOf(m.parts) ?? base?.parts ?? null });
+  const modelOf = (m, base) => ({ file: m.file, scale: m.scale ?? base?.scale ?? 1, parts: partsOf(m.parts) ?? base?.parts ?? null, size: m.size ?? null });
   CATALOG = Object.fromEntries(Object.entries(products).map(([id, p]) => {
     const model = modelOf(p.model);
     const variants = p.model.variants && Object.fromEntries(Object.entries(p.model.variants).map(([v, m]) => [v, modelOf(m, model)]));
@@ -49,11 +49,17 @@ const STORE_FINISH = 'living-room.finishes'; // kept apart, so a new default lay
 
 export class Furniture {
   // onChange(what): what === 'light' when only materials changed (a finish), so shadows can stay;
-  // otherwise something moved or changed shape. anisotropy: texture filtering (the quality level).
-  constructor(R, renderer, onChange, { anisotropy } = {}) {
+  // 'move' when a piece moved or turned (its materials and what hangs from its pivot came along);
+  // otherwise something changed shape, came or went. anisotropy: texture filtering (the quality level).
+  // onHang(hang): the pendant is to hang from a swag hook at hang { x, z, bottom }, or from its
+  // outlet again (null); main.js moves it.
+  constructor(R, renderer, onChange, { anisotropy, onHang = () => {} } = {}) {
     this.W = R.width;
     this.L = R.length;
     this.door = R.balconyDoor; // its swing must stay clear when a piece is placed for you
+    this.pendantBottom = R.pendant?.bottom ?? 2;
+    this.hang = null; // where the pendant hangs, if not from its outlet: { x, z, bottom }
+    this.onHang = onHang;
     this.onChange = onChange;
     this.aniso = Math.min(anisotropy ?? Infinity, renderer.capabilities.getMaxAnisotropy());
     this.group = new THREE.Group();
@@ -93,7 +99,7 @@ export class Furniture {
     this.defaultPreset = DEFAULT_PRESET;
     const saved = readSaved();
     const finishes = readFinishes();
-    const fresh = !Object.keys(finishes).length && !Object.keys(saved).length;
+    const fresh = !Object.keys(finishes).length && !Object.keys(saved.items).length;
     const start = fresh ? PRESETS.find((p) => p.id === preset) ?? PRESETS.find((p) => p.id === DEFAULT_PRESET) : null;
     const loading = Promise.all(LAYOUT.map(async (entry) => {
       const kept = finishes[entry.id] ?? (start ? { product: this.presetFor(start, { id: entry.id, home: entry })?.item } : {});
@@ -112,7 +118,7 @@ export class Furniture {
       };
       await this.loadInto(item, key, variantOf(options, item.choices));
       pivot.visible = item.present;
-      const at = entry.movable === false ? null : saved[entry.id];
+      const at = entry.movable === false ? null : saved.items[entry.id];
       if (at) this.place(item, at.x, at.z, at.rotation, { snap: false });
       else this.placeHome(item);
       await this.paintAll(item);
@@ -134,11 +140,27 @@ export class Furniture {
     }
     this.items.push(...loaded.filter((i) => have.has(i.id)));
     if (!this.items.length) throw new Error('no furniture could load');
+    // The options of every product a preset names (small files): a preset's score in the panel
+    // needs to know the model its choices pick (castors) before it's applied. `optionsReady`
+    // resolves once they're in (main.js redraws the panel then).
+    this.optionsReady = Promise.allSettled([...new Set(PRESETS.flatMap((p) => Object.values(p.pieces).map((e) => e.item)).filter((k) => k && CATALOG[k]))].map((key) => loadOptions(CATALOG[key].options)));
     // Pieces placed by another (the pouf by the sofa, which makes room for it; chairs around the
     // table) go there once all are known. LAYOUT lists each piece after the one it depends on.
-    for (const item of this.items) if (!saved[item.id]) this.placeHome(item);
+    for (const item of this.items) if (!saved.items[item.id]) this.placeHome(item);
     if (start) await this.applyPreset(start.id);
+    else this.setHang(saved.hang, { save: false });
     this.warnOverlaps();
+    this.onChange();
+    this.fastPicking = enableFastPicking(); // resolves once the picking library is in (or has failed)
+  }
+
+  // The pendant: swagged from a ceiling hook at hang { x, z, bottom }, or from its outlet (null).
+  setHang(hang, { save = true } = {}) {
+    const next = hang ? { x: hang.x, z: hang.z, bottom: hang.bottom ?? this.pendantBottom } : null;
+    if (JSON.stringify(next) === JSON.stringify(this.hang)) return;
+    this.hang = next;
+    this.onHang(next);
+    if (save) this.save();
     this.onChange();
   }
 
@@ -171,6 +193,12 @@ export class Furniture {
   // rather than its footprint box: the In Situ's door-side seat ends 60 cm short of its chaise.
   // -Infinity if no part of it is there.
   reach(item, z0, z1) {
+    if (!item.meshes) {
+      // No model yet (a preset's layout before it's applied): the seat is as deep as the catalog
+      // says (`seatDepth`, where a chaise makes the whole deeper), else the whole footprint.
+      const f = this.footprint(item);
+      return item.rotation === 90 && item.spec.seatDepth != null ? f.x0 + item.spec.seatDepth : f.x1;
+    }
     const m = new THREE.Matrix4(), v = new THREE.Vector3();
     item.pivot.updateMatrix();
     item.object.updateMatrix();
@@ -203,7 +231,7 @@ export class Furniture {
       this.clearance.update(this.footprint(item), this.W, this.L);
       this.anchorPopup(item);
     }
-    this.onChange();
+    this.onChange('move');
   }
 
   // Where a `place` puts a piece: distances from its footprint to the walls (left / right,
@@ -224,18 +252,19 @@ export class Furniture {
   // along for a piece that needs the room (the pouf's `hostZ0`); for one that `attach`es to
   // another, in front of that one's window end (the pouf) or of its door-side seat (`end: 'door'`,
   // the coffee table); for one `around` another (the chairs), at an offset from it.
-  // Returns { x, z, rotation, y } without placing it.
-  homeOf(item) {
+  // Returns { x, z, rotation, y } without placing it. `items`: the room's pieces, or a preset's
+  // virtual ones (layoutOf).
+  homeOf(item, items = this.items) {
     const h = item.home, rotation = h.rotation;
     const { hx, hz } = this.footprint(item, { x: 0, z: 0, rotation });
     const at = (x, z) => ({ x: fit(x, hx, this.W, false), z: fit(z, hz, this.L, false), rotation, y: 0 });
-    const to = this.hostOf(item);
+    const to = this.hostOf(item, items);
     if (to && h.attach.end === 'door') {
       const f = this.footprint(to), a = h.attach;
       let z0 = f.z1 - a.seat - hz;
       // `front` clear of a piece at the host's window end too (the pouf, where it goes).
-      for (const o of this.items) {
-        if (o !== item && o.present && this.hostOf(o) === to && o.home.attach.end !== 'door') z0 = Math.max(z0, this.footprint(o, this.homeOf(o)).z1 + a.front);
+      for (const o of items) {
+        if (o !== item && o.present && this.hostOf(o, items) === to && o.home.attach.end !== 'door') z0 = Math.max(z0, this.footprint(o, this.homeOf(o, items)).z1 + a.front);
       }
       // `front` off the seat there, and outside the host's footprint (past a chaise).
       const x0 = Math.max(this.reach(to, z0, z0 + 2 * hz) + a.front, f.x1 + a.clear);
@@ -250,12 +279,12 @@ export class Furniture {
       if (d && x0 + 2 * hx > d.offset && z0 < d.width) z0 = Math.max(z0, d.width + 0.05);
       return at(x0 + hx, z0 + hz);
     }
-    const around = h.around && this.items.find((i) => i.id === h.around.id);
+    const around = h.around && items.find((i) => i.id === h.around.id);
     if (around) return at(around.x + h.around.dx, around.z + h.around.dz);
     // Placed by a piece that hasn't loaded yet: anywhere for now, load() places it again after.
     if (!h.place) return at(this.W / 2, this.L / 2);
     // Its own place; the window end moved along for a piece that needs the room there (the pouf's `hostZ0`).
-    const guest = this.items.find((i) => i.present && this.hostOf(i) === item && i.home.attach.hostZ0 != null);
+    const guest = items.find((i) => i.present && this.hostOf(i, items) === item && i.home.attach.hostZ0 != null);
     const spot = this.spotOf(item, guest ? { ...h.place, window: guest.home.attach.hostZ0, door: undefined, z: undefined } : h.place);
     return h.movable === false ? spot : { ...at(spot.x, spot.z), y: spot.y };
   }
@@ -266,8 +295,8 @@ export class Furniture {
   }
 
   // The piece this one stands by (the sofa, for the pouf), if any.
-  hostOf(item) {
-    return item.home.attach ? this.items.find((i) => i.id === item.home.attach.id) : null;
+  hostOf(item, items = this.items) {
+    return item.home.attach ? items.find((i) => i.id === item.home.attach.id) : null;
   }
 
   atHome(item) {
@@ -402,11 +431,15 @@ export class Furniture {
     const spec = CATALOG[key];
     const def = variant !== 'standard' && spec.variants?.[variant] ? spec.variants[variant] : spec.model;
     const model = await loadModel(`${key}#${def === spec.model ? 'standard' : variant}`, def, this.aniso, !!spec.footprint);
-    if (item.object) item.pivot.remove(item.object);
+    if (item.object) {
+      item.pivot.remove(item.object);
+      for (const m of item.ownMaterials ?? []) m.dispose(); // this copy's own fallback materials; the finishes are shared
+    }
     item.pivot.add(model.object);
     Object.assign(item, {
       key, spec, variant: def === spec.model ? 'standard' : variant, object: model.object, size: model.size, local: model.local,
-      meshes: model.meshes, partDefs: model.partDefs, materials: model.materials, parts: indexParts(model.meshes, model.partDefs), outline: null,
+      meshes: model.meshes, partDefs: model.partDefs, materials: model.materials, ownMaterials: model.materials,
+      parts: indexParts(model.meshes, model.partDefs), outline: null,
     });
   }
 
@@ -481,6 +514,7 @@ export class Furniture {
       for (const mesh of a.part.meshes) mesh.material = a.material;
     }
     item.materials = [...new Set(item.meshes.map((m) => m.material))];
+    pruneMaterials(new Set(this.items.flatMap((i) => i.materials ?? [])));
   }
 
   async paintAll(item) {
@@ -580,6 +614,7 @@ export class Furniture {
       if (item.present && p.place) this.placeAt(item, p.place);
       else if (item.present && (p.item || p.present)) this.placeHome(item);
     }
+    this.setHang(preset.pendant ?? null, { save: false });
     this.lastPreset = id;
     this.save();
     this.onChange();
@@ -603,7 +638,7 @@ export class Furniture {
   currentPreset() {
     if (!this.items.length) return null; // not loaded yet
     const last = PRESETS.find((p) => p.id === this.lastPreset);
-    return [...(last ? [last] : []), ...PRESETS].find((preset) => this.items.every((item) => {
+    return [...(last ? [last] : []), ...PRESETS].find((preset) => this.hangMatches(preset) && this.items.every((item) => {
       const p = this.presetFor(preset, item);
       if (!p) return true;
       if (p.present != null && p.present !== item.present) return false;
@@ -613,6 +648,67 @@ export class Furniture {
       if (!want) return true;
       return Object.entries(normalise(item.options, want)).every(([g, id]) => item.choices[g] === id);
     }))?.id ?? null;
+  }
+
+  hangMatches(preset) {
+    const want = preset.pendant ? { x: preset.pendant.x, z: preset.pendant.z, bottom: preset.pendant.bottom ?? this.pendantBottom } : null;
+    return JSON.stringify(want) === JSON.stringify(this.hang);
+  }
+
+  // ---- For the layout check (layout-check.js) ---------------------------------------------
+
+  // What stands on the floor, as footprints with what each piece is: present pieces at floor
+  // level (not the sill plants, the pictures, or the balcony's furniture).
+  piecesOf(items) {
+    return items.filter((i) => i.present && !i.y && i.spec.category !== 'art').map((i) => ({
+      id: i.id, label: i.home.label ?? i.spec.name, category: i.spec.category, ...this.footprint(i), rotation: i.rotation, host: i.home.around?.id ?? null,
+    }));
+  }
+  // The pictures on the walls: which wall (the one they turn their back to) and the stretch they cover.
+  artOf(items) {
+    return items.filter((i) => i.present && i.spec.category === 'art').map((i) => {
+      const f = this.footprint(i);
+      const wall = { 0: 'north', 90: 'west', 180: 'south', 270: 'east' }[i.rotation] ?? 'west';
+      const along = wall === 'west' || wall === 'east' ? [f.z0, f.z1] : [f.x0, f.x1];
+      return { wall, from: along[0], to: along[1] };
+    });
+  }
+  floorPieces() {
+    return this.piecesOf(this.items.filter((i) => i.pivot.parent));
+  }
+  wallArt() {
+    return this.artOf(this.items);
+  }
+
+  // What a preset would put where, without applying it (its score in the Presets panel), or the
+  // room as a set of undo snapshots has it (the Custom row): the layout check's pieces and art.
+  // Pieces a preset doesn't name keep what they have now. Sizes come from the loaded models, or
+  // from the catalog's listed sizes until a model has loaded.
+  layoutOf(preset, snapshots = null) {
+    const snaps = snapshots && new Map(snapshots.map((s) => [s.item.id, s]));
+    const items = this.items.map((cur) => {
+      const p = preset ? this.presetFor(preset, cur) : null, snap = snaps?.get(cur.id);
+      const key = p?.item && CATALOG[p.item] ? p.item : snap?.key ?? cur.key;
+      const spec = CATALOG[key], options = optionData.get(spec.options);
+      const variant = p || snap ? variantOf(options, normalise(options, p ? p.choices : snap.choices)) : cur.variant;
+      return { id: cur.id, key, spec, home: cur.home, size: sizeOf(key, variant), present: p?.present ?? snap?.present ?? cur.present, rotation: cur.home.rotation, x: cur.x, z: cur.z, y: cur.y, p, snap, cur };
+    });
+    // Then where each stands, hosts before what stands by them (the room's pieces are in that order).
+    for (const v of items) {
+      if (!v.present) continue;
+      const { p, snap, cur } = v;
+      if (p?.place) Object.assign(v, this.spotOf(v, p.place));
+      else if (p && (p.item || p.present)) Object.assign(v, this.homeOf(v, items));
+      else if (snap) Object.assign(v, { x: snap.x, z: snap.z, rotation: snap.rotation, y: snap.y });
+      else Object.assign(v, { x: cur.x, z: cur.z, rotation: cur.rotation, y: cur.y });
+    }
+    return { pieces: this.piecesOf(items), art: this.artOf(items) };
+  }
+
+  // Changes whenever the pieces' places, products or known sizes do (the Presets panel keeps its
+  // scores until it does).
+  stateKey() {
+    return JSON.stringify([this.items.map((i) => [i.id, i.key, i.variant, i.present, Math.round(i.x * 1000), Math.round(i.z * 1000), i.rotation]), this.hang, templateSizes.size, optionData.size]);
   }
 
   // Everything undo needs to put a piece back.
@@ -683,7 +779,7 @@ export class Furniture {
   save() {
     try {
       const items = Object.fromEntries(this.items.map((i) => [i.id, { x: i.x, z: i.z, rotation: i.rotation }]));
-      localStorage.setItem(STORE, JSON.stringify({ signature, items }));
+      localStorage.setItem(STORE, JSON.stringify({ signature, items, hang: this.hang }));
       // Per piece: another product, in or out of the room, the pouf no longer matching the sofa,
       // and only the finishes that differ from the default.
       const finishes = {};
@@ -727,14 +823,16 @@ function fit(c, h, len, snap) {
   return THREE.MathUtils.clamp(c, lo, hi);
 }
 
+// The saved places (and where the pendant hangs), unless the default layout has changed since.
 function readSaved() {
   try {
     const s = JSON.parse(localStorage.getItem(STORE));
-    // Ignore saved moves once the default layout in this file changes.
-    return s?.signature === signature ? s.items : {};
+    const h = s?.hang;
+    if (s?.signature === signature) return { items: s.items ?? {}, hang: h && Number.isFinite(h.x) && Number.isFinite(h.z) ? h : null };
   } catch {
-    return {};
+    // unreadable: as a first visit
   }
+  return { items: {}, hang: null };
 }
 
 // Finishes picked in the app, by layout id. Unknown options fall back to the default.
@@ -757,12 +855,68 @@ const textures = new THREE.TextureLoader();
 const images = new Map(); // texture path → Promise<Texture>, so each image is fetched once
 const madeMaps = new Set(); // every texture handed to a material (for setAnisotropy)
 const templates = new Map(); // catalog key → Promise of the loaded model
+const templateSizes = new Map(); // catalog key#variant → the loaded model's size (x, y, z)
+function template(key, def, aniso, keepOrigin) {
+  if (!templates.has(key)) {
+    const job = loadTemplate(def, aniso, keepOrigin);
+    templates.set(key, job);
+    job.then((t) => {
+      templateSizes.set(key, t.size);
+      prepareTemplate(t);
+    }, () => {});
+  }
+  return templates.get(key);
+}
+
+// ---- Picking and outlines, prepared in idle time ----------------------------------------
+// Picking a dense model (the In Situ is 60,000 triangles) costs milliseconds a ray with three's
+// own raycast, and hovering picks every frame. three-mesh-bvh (from the CDN, like three; loaded
+// once the furniture is in, so it doesn't compete with the models) makes it a fraction of a
+// millisecond. If it can't load, picking works as before, just slower. The selection outline's
+// hull (a merge of each mesh's vertices, up to 85 ms for a sofa) is made in idle time too, so
+// the first selection doesn't pause.
+const idle = (fn) => (window.requestIdleCallback ?? ((f) => setTimeout(f, 50)))(fn, { timeout: 4000 });
+let bvh = null; // the three-mesh-bvh module, once it has loaded
+const floatPositions = (g) => g.attributes.position?.array instanceof Float32Array && !g.attributes.position.isInterleavedBufferAttribute;
+function prepareTemplate(t) {
+  const meshes = [];
+  t.object.traverse((o) => o.isMesh && meshes.push(o));
+  const step = () => {
+    const m = meshes.shift();
+    if (!m) return;
+    try {
+      hullGeometry(m.geometry);
+      if (bvh && !m.geometry.boundsTree && floatPositions(m.geometry)) m.geometry.boundsTree = new bvh.MeshBVH(m.geometry);
+    } catch (err) {
+      console.warn('Preparing a model for picking failed:', err);
+    }
+    idle(step);
+  };
+  idle(step);
+}
+let fastPicking = null;
+function enableFastPicking() {
+  fastPicking ??= import('three-mesh-bvh').then((m) => {
+    bvh = m;
+    THREE.Mesh.prototype.raycast = m.acceleratedRaycast; // meshes without a tree keep three's raycast
+    for (const job of templates.values()) job.then(prepareTemplate, () => {});
+  }, (err) => console.warn('Fast picking unavailable (three-mesh-bvh):', err));
+  return fastPicking;
+}
+// A product's size as { x, y, z }: the model's own box once it has loaded, the catalog's listed
+// size (the variant's, where it has one) until then.
+function sizeOf(key, variant = 'standard') {
+  const t = templateSizes.get(`${key}#${variant}`);
+  if (t) return { x: t.x, y: t.y, z: t.z };
+  const spec = CATALOG[key];
+  const listed = (variant !== 'standard' && spec.variants?.[variant]?.size) || spec.listed;
+  return { x: listed.width, y: listed.height, z: listed.depth };
+}
 
 // Each catalog piece is fetched and parsed once. Every copy in the layout is a clone that
 // shares its geometry and textures; materials are swapped per copy when its finish changes.
 async function loadModel(key, def, aniso, keepOrigin = false) {
-  if (!templates.has(key)) templates.set(key, loadTemplate(def, aniso, keepOrigin));
-  const t = await templates.get(key);
+  const t = await template(key, def, aniso, keepOrigin);
   const object = t.object.clone();
   const own = new Map(t.materials.map((m) => [m, m.clone()]));
   const meshes = [];
@@ -776,9 +930,7 @@ async function loadModel(key, def, aniso, keepOrigin = false) {
 
 // Starts loading a model that's likely to be needed (loadModel then finds it under the same key).
 function prefetchModel(key, def, aniso, keepOrigin) {
-  if (templates.has(key)) return;
-  templates.set(key, loadTemplate(def, aniso, keepOrigin));
-  templates.get(key).catch(() => {}); // if it isn't used after all, a failure isn't worth a warning
+  template(key, def, aniso, keepOrigin).catch(() => {}); // if it isn't used after all, a failure isn't worth a warning
 }
 
 // OBJ files are split into the catalog's parts by group name, each with the part's material.
@@ -927,11 +1079,33 @@ function materialSpec(group, option, partId) {
   return fam ? { ...fam.material, color: option.color } : { type: 'plain', color: option.color };
 }
 
-const optionMaterials = new Map(); // one material per product, part and option, shared by every copy
+const optionMaterials = new Map(); // id → { promise, material }: one per product, part and option, shared by every copy
+const SPARE_MATERIALS = 24; // finishes kept though no piece shows them (switching back is instant)
 function optionMaterial(key, partId, groupId, optionId, spec, part, dir, aniso) {
   const id = `${key}|${partId}|${groupId}|${optionId}`;
-  if (!optionMaterials.has(id)) optionMaterials.set(id, buildMaterial(spec, part ?? {}, dir, aniso));
-  return optionMaterials.get(id);
+  let entry = optionMaterials.get(id);
+  if (!entry) {
+    entry = { promise: buildMaterial(spec, part ?? {}, dir, aniso), material: null };
+    entry.promise.then((m) => (entry.material = m), () => optionMaterials.delete(id));
+    optionMaterials.set(id, entry);
+  } else {
+    optionMaterials.delete(id); // most recently used last
+    optionMaterials.set(id, entry);
+  }
+  return entry.promise;
+}
+// Lets go of finish materials no piece shows (inUse: those on pieces now), oldest first, beyond
+// SPARE_MATERIALS of them: a texture's GPU copy goes when its last material does.
+function pruneMaterials(inUse) {
+  const spare = [...optionMaterials].filter(([, e]) => e.material && !inUse.has(e.material));
+  for (const [id, e] of spare.slice(0, Math.max(0, spare.length - SPARE_MATERIALS))) {
+    optionMaterials.delete(id);
+    if (e.material.map) {
+      madeMaps.delete(e.material.map);
+      e.material.map.dispose();
+    }
+    e.material.dispose();
+  }
 }
 
 const WHITE = new THREE.Color(1, 1, 1);
@@ -992,6 +1166,7 @@ async function buildMaterial(spec, part, dir, aniso) {
 // A material is { type, color?, map?, tile: [u, v] metres, rotate?, roughness, detail? };
 // paths are relative to the JSON file.
 const optionFiles = new Map();
+const optionData = new Map(); // path → the loaded options, for synchronous use (layoutOf)
 function loadOptions(path) {
   if (!path) return Promise.resolve(null);
   if (!optionFiles.has(path)) {
@@ -1003,6 +1178,7 @@ function loadOptions(path) {
           g.byId = new Map(g.options.map((o) => [o.id, o]));
           g.familyById = new Map((g.families ?? []).map((f) => [f.id, f]));
         }
+        optionData.set(path, data);
         return data;
       })
       .catch((err) => {

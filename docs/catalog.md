@@ -60,11 +60,12 @@ The option lists are kept per product, because they are long: up to 1,005 uphols
 | `url` | `url` or `source` | The product's page. The info card's product name links there. |
 | `itemUrl` | optional | The page of one configuration. `{item}` becomes the configured item number (built from the options file's `item` pattern), and `{<group>}` that group's code. The card's **Shop** link goes there. |
 | `size` | required | The maker's listed W × D × H. The room uses the model's own box, which can differ by a few centimetres. |
+| `seatDepth` | optional | How deep the seat is where a chaise makes the whole deeper (the In Situ with chaise). The coffee table is placed off the seat, not the chaise; this says where that is before the model has loaded (a preset's layout check). |
 | `footprint` | optional | What stands on the floor, when smaller than the whole model (a plant's pot under its crown). It's used for walls and collisions, and the model's origin is its centre. |
 | `finish` | optional | The default finish in words, shown until the options load. |
 | `options` | optional | Path of the product's options file. Without one, the finish is fixed. |
 | `source` | optional | `{ url?, name?, author?, licence }`, for a model that isn't the maker's (the plants), or a print's artwork (shown as **Image** on the card). `name` is the link's text (e.g. Wikimedia Commons), the maker if left out. |
-| `model` | required | `file` (`.obj` or `.glb`), `scale` (model units to metres), `parts` (or the name of a `partSets` list), and `variants`: other models of the product that an option switches to (`model` on an option), such as the Outline on castors or another size. |
+| `model` | required | `file` (`.obj` or `.glb`), `scale` (model units to metres), `parts` (or the name of a `partSets` list), and `variants`: other models of the product that an option switches to (`model` on an option), such as the Outline on castors or another size. A variant can give its own `size` where it differs (castors add 9 cm of depth), for a preset's layout check before the model has loaded. |
 
 A part is `{ id, match, material, uvPerM?, planarUV?, boxUV?, rotate? }`:
 - `match` is a regular expression for the model's group names.
@@ -151,6 +152,12 @@ chairs share one finish). For each it may set:
 - `place`: where it stands, in the same form as a piece's `place`.
 
 Pieces a preset doesn't name keep what they have. Applying a preset is one undo step.
+
+A preset can also say where the existing **pendant** hangs: `"pendant": {"x": 1.175, "z": 0.8, "bottom": 1.45}`
+swags it on a longer cord from a ceiling hook at (x, z), with the shade's bottom that high (over a
+table: 65–75 cm above the top). Presets without it hang the pendant from its outlet, at the height
+in `src/config.js`. The catalog check makes sure the hook is inside the room and the height is
+one the cord and shade allow.
 
 `default` is the preset a first visit starts with. `palette` lists the colours each preset is
 shown with in the panel.

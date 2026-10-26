@@ -76,6 +76,11 @@
         "size": {
           "$ref": "#/$defs/size"
         },
+        "seatDepth": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "How deep the seat part is, where a chaise makes the whole deeper (the In Situ with chaise): the coffee table is placed off the seat, not the chaise, before the model has loaded (src/furniture/furniture.js reach), e.g. for a preset's layout check."
+        },
         "finish": {
           "type": "string",
           "description": "The default finish in words, shown until the options have loaded (or if they can't)."
@@ -219,6 +224,10 @@
               "description": "The name of a list in partSets."
             }
           ]
+        },
+        "size": {
+          "$ref": "#/$defs/size",
+          "description": "A variant's size where it differs from the product's (the Outline on castors is 9 cm deeper): used for a preset's layout check before the model has loaded."
         }
       }
     },
@@ -233,6 +242,7 @@
         "file": true,
         "scale": true,
         "parts": true,
+        "size": true,
         "variants": {
           "description": "Other models of the same product that an option switches to (an option's `model`), e.g. the Outline on castors, or another size.",
           "type": "object",

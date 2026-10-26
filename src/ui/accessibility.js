@@ -13,11 +13,12 @@ export function createAccessibility({ state, canvas, room, furniture, fixtures, 
     requestAnimationFrame(() => (announcer.textContent = text));
   }
 
-  // The room card and the presets fold to their title line. Phones and short screens start folded,
-  // and the viewer's own choice is kept for the visit.
+  // The room card and the presets fold to their title line. The presets start open on big screens
+  // and folded on phones and short screens; the room card starts folded everywhere (its title line
+  // shows the layout check's score). The viewer's own choice is kept for the visit.
   const smallScreen = () => window.matchMedia('(max-width: 640px), (max-height: 560px)').matches;
-  function foldable(toggle, body, titles) {
-    let preference = !smallScreen(), chosen = false;
+  function foldable(toggle, body, titles, { startOpen = () => !smallScreen() } = {}) {
+    let preference = startOpen(), chosen = false;
     function setOpen(open) {
       body.hidden = !open;
       toggle.setAttribute('aria-expanded', String(open));
@@ -37,14 +38,14 @@ export function createAccessibility({ state, canvas, room, furniture, fixtures, 
     // Until the viewer picks, it follows the screen (e.g. folds when a phone turns sideways).
     window.addEventListener('resize', () => {
       if (chosen || state.edit) return;
-      const open = !smallScreen();
+      const open = startOpen();
       if (open !== preference) setOpen((preference = open));
     });
     // While editing on a small screen it folds away, so the piece stays in view.
     return { foldForEdit: (editing) => smallScreen() && setOpen(editing ? false : preference) };
   }
   const panels = [
-    foldable(document.getElementById('card-toggle'), document.getElementById('card-body'), { open: 'Show less', closed: 'Show room details and sun' }),
+    foldable(document.getElementById('card-toggle'), document.getElementById('card-body'), { open: 'Hide the layout check', closed: 'Show the layout check and room details' }, { startOpen: () => false }),
     foldable(document.getElementById('presets-toggle'), document.getElementById('presets-body'), { open: 'Hide the presets', closed: 'Show the presets' }),
   ];
 

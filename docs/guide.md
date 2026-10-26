@@ -28,17 +28,23 @@ Panning can't lose the room: the camera's focus point stays in or near it.
 
 - **Edit** lets you move and rotate furniture (see below). Outside Edit, furniture ignores taps
   and drags, so looking around never moves anything by accident.
-- **Sun** (in the room card): the time of day (6:00–23:00) and month. The sun is where it really is
-  over the flat at that moment, and the neighbours' buildings and trees cast their real shadows into
-  the room. After sunset the sky fades to dusk and the ceiling light comes on by itself.
+- **Sun** (in the toolbar): one tap switches between day (13:00) and evening (just after dusk for
+  the chosen month, when the ceiling light comes on by itself); the icon shows which. The chevron
+  next to it (or a long press on the narrowest phones, where the chevron is hidden) opens a panel
+  with the time of day (6:00–23:00) and the month. The sun is where it really is over the flat at
+  that moment, and the neighbours' buildings and trees cast their real shadows into the room. After
+  sunset the sky fades to dusk.
 - **The room's fittings** can be tapped like furniture. Each card says what it is and can do:
   - the **ceiling light**: *Turn on* / *Turn off*, and *Automatic* (on once the sun is down) after
     you've switched it by hand;
   - the **entry door**, the **balcony door** and the **window** (both sashes): *Open* / *Close*, to
     check clearances;
   - the **curtains**: *Close* draws both panels across the rail; *Open* gathers them again.
-- **Presets** (top right): whole-room looks, one tap each; **None** shows the empty room. See
-  Furniture below.
+- **Presets** (top right): whole-room looks and layouts, one tap each, each with its layout-check
+  score; **None** shows the empty room. See Furniture below.
+- **The room card** (top left) folds to its title line: the room's size and the **layout check**'s
+  score. Open it for the eight rules with a reason each; while it's open the practice zone and the
+  line between the doors are drawn on the floor. See [Layout check](#layout-check).
 - **Settings** (the gear in the toolbar) opens a small panel:
   - **Show measurements** (off at first): wall dimensions, door and window swings, and the
     ceiling-light position.
@@ -106,6 +112,35 @@ Panning can't lose the room: the camera's focus point stays in or near it.
   (`curtains` in [src/config.js](../src/config.js)).
 - **Cut walls** in the 3D view and in Plan show a black section cap, like an architect's drawing.
 
+## Layout check
+
+The room is scored against the rules of the [layout review](layout-review.md), the way an interior
+designer and a feng shui practitioner would look at it, for a room that is also a yoga studio
+(`src/furniture/layout-check.js`). It runs on the room as it is (so it follows a drag in Edit and
+Custom), and on each preset before it's applied, for the score in the Presets panel. Each rule
+passes, warns or fails; the score counts the passes.
+
+| Rule | Passes when |
+| --- | --- |
+| Commanding seat | The sofa has a wall within 8 cm behind it and sees the entry door (within 80° of straight ahead), not straight in line with it. |
+| Doors clear | Nothing stands in either door's swing (a fail), nor on the straight line between the two doors (a warning). |
+| Head room | Nothing hangs below 2.0 m over open floor: the pendant passes over a table, warns over a seat, fails over open floor. |
+| Soft corners | No dining-table corner within 60 cm of a sofa or pouf (a warning). |
+| Lane | The way from the entry door to the balcony door is at least 90 cm wide at its narrowest, measured row by row across the room between furniture, the pendant at head height, and the walls; 70 cm warns. |
+| Dining chairs | At least 75 cm from the table's edge behind every chair to a wall or another piece; 60–75 cm warns. 90 cm or more is room to pass as well as sit. |
+| Practice zone | Clear floor for a 2.0 × 0.8 m mat: 2.6 × 1.6 m free-standing, or 2.3 m out from a wall × 1.4 m along it with the mat's head at that wall (30 cm either side of the mat), with nothing below 2.2 m over it and not in the entry door's swing. A zone only in the line between the doors warns (the balcony is cut off while you practise). |
+| Free wall | A stretch of wall 1.4 m long with 2.3 m of clear floor in front, free of furniture, door swings, the window and pictures, for inversions; 1 m of floor in front warns (standing poses only). |
+
+The floor is rasterised at 5 cm for the zone search; a piece blocks any cell it reaches 1 cm into.
+Pictures count for the wall they hang on (a wall used for inversions must have nothing where
+hands and feet go). The practice zone found is the best one: out of the lane first, then with the
+mat's head at a wall, then farthest from the line between the doors.
+
+Presets can swag the pendant (`pendant` in [presets.json](../assets/catalog/presets.json)): the
+cord runs along the ceiling from the outlet to a hook and drops from there, the lamp's light moves
+with the shade, and the check sees it where it hangs. The recommended layout hangs it over the
+dining table.
+
 ## Tests and tools
 
 - `npm test` checks the catalog (`scripts/check-catalog.mjs`), then opens the app in headless Chrome
@@ -113,11 +148,18 @@ Panning can't lose the room: the camera's focus point stays in or near it.
   sideways, and fails on any console error. It also opens the settings panel: dialog semantics,
   Esc and focus, Show measurements, a quality level applied live, arrow keys between levels, and
   on phones (360 and 390 px) that the panel fits, its targets are 44 px and the toolbar stays one
-  row. Screenshots land in `test-output/`.
+  row. It checks the layout check too: the card's score and its eight rules, the zone drawn on the
+  floor while the card is open, a score next to every preset that equals the card's once that
+  preset is applied, the layouts' ranking, the recommended layout's swagged pendant, and the Sun
+  switch (evening with the light on, day again, the panel opened by its chevron and closed by Esc).
+  Screenshots land in `test-output/`.
 - `npm start` (`scripts/serve.mjs`) serves text files compressed (brotli or gzip, like a real host;
   `COMPRESS=0` to turn it off) with ETags, so reloads only fetch what changed.
 - `npm run build:artifact` writes `dist/index.html` plus `dist/files.json`, the list of every file
   the page loads, for publishing it as a claude.ai artifact.
+- Picking furniture under the pointer uses [three-mesh-bvh](https://github.com/gkjohnson/three-mesh-bvh)
+  (from the CDN, loaded once the furniture is in; without it, picking works as before, just slower).
+  [code-review-2.md](code-review-2.md) has the second code review: bugs, performance and robustness.
 
 ## Measurements
 
@@ -152,17 +194,22 @@ src/quality.js             rendering quality: the levels, Auto, remembering the 
 src/config.js              room measurements
 src/util.js                small shared helpers (seeded random numbers, smoothing)
 src/scene/                 room.js (walls, openings, window, doors), textures.js (parquet),
-                           pendant.js, curtains.js, annotations.js (dimensions, swings),
-                           cutaway.js (cut walls, plan section), surroundings.js (swisstopo),
-                           fixtures.js (the light, doors, window, curtains you can tap)
+                           pendant.js (hung from the outlet or swagged), curtains.js,
+                           annotations.js (dimensions, swings), cutaway.js (cut walls, plan
+                           section), surroundings.js (swisstopo), fixtures.js (the light, doors,
+                           window, curtains you can tap), layout-overlay.js (the practice zone
+                           and the door line on the floor)
 src/lighting/              lighting.js (sun, windows, lamp, exposure, white balance),
                            indirect.js (light probes), sun.js (sun position),
                            corner-ao.js, shader-hooks.js (stackable shader patches)
 src/furniture/             furniture.js (loads the catalog; finishes, placing, outline, card),
-                           editor.js (Edit: select, drag, undo, edit panel, info card, presets)
+                           editor.js (Edit: select, drag, undo, edit panel, info card, presets),
+                           layout-check.js (the room against the layout review's rules)
 src/controls/walk.js       first-person walking
 src/ui/                    accessibility.js (keyboard 3D view, room in words, folding panels),
-                           loading.js (loading bar and status), settings.js (the gear's panel),
+                           loading.js (loading bar and status), popover.js (a panel next to a
+                           button), settings.js (the gear's panel), sun.js (the Sun switch and
+                           its panel), layout-card.js (the layout check in the room card),
                            diagnostics.js (the panel that reports problems)
 assets/catalog/            products.json, presets.json and their schemas (docs/catalog.md)
 assets/furniture/          web-ready models, finishes (options.json) and swatches
@@ -249,12 +296,22 @@ and **Shop**, a link to exactly that configuration at muuto.com. A plant's card 
 comes from. In Walk the tap also walks you up to it. **Change finish** on the card, or Esc / × / a tap
 elsewhere to close it. The selection gets a yellow outline around its silhouette.
 
-**Presets**, top right, set the whole room in one tap, in any view and without Edit. Each is named by
-product, configuration and fabric, with the rest below in the same order (legs or frame · side table ·
-chairs): *Outline 2-seater + pouf, Steelcut 220* (the default), *Outline 2-seater + pouf, Clay 12*,
-*Outline 2-seater, Steelcut 220* (no pouf; the side table stands in front of the window-end seat
-instead), *In Situ 2-seater with chaise, Clay 12* and *In Situ 2-seater with chaise, Ecriture 210*.
-Each shows its colours (sofa, chair shell, wood, table top), and the one the room matches has a check. If you've made your own changes, picking a preset keeps
+**Presets**, top right, set the whole room in one tap, in any view and without Edit. Seven looks
+keep today's layout and are named by product, configuration and fabric, with the rest below in the
+same order (legs or frame · side table · chairs · lamp): *Outline 2-seater + pouf, Steelcut 220*
+(the default), *Outline 2-seater + pouf, Clay 12*, *Outline 2-seater, Steelcut 220* (no pouf; the
+side table stands in front of the window-end seat instead), *Outline 3-seater, Steelcut 220* (the
+220 cm sofa, for the size question), *Outline 2-seater, Remix 183* (charcoal: the dark look),
+*In Situ 2-seater with chaise, Clay 12* and *In Situ 2-seater with chaise, Ecriture 210*. Three
+layouts from the [layout review](layout-review.md) move the furniture as well, each in two looks:
+*Dining at the window* (the recommended one: the table by the window, the sofa at the entry end
+seeing the door with the lamp in the corner behind it, the middle of the room open as the practice
+zone, the pendant swagged over the table) in dusty blue Ecriture 760 or moss green Hallingdal 960;
+*Everything on the left wall* (the smallest change from today) in Clay 12 or cognac Refine Leather;
+and *Sofa facing the view* in sand Ecriture 210 or rust Steelcut Trio 533. Why these finishes, and
+what the catalog still lacks, is in [presets-review.md](presets-review.md). Each shows its colours
+(sofa, chair shell, wood, table top) and its layout-check score, and the one the room matches has a
+check. If you've made your own changes, picking a preset keeps
 them under **Custom**, so you can go back to them. **None** shows the empty room (the furniture is
 hidden, not changed). Each pick is one undo step. The preset is in the page's link
 (`#preset=wood-white`, or `#preset=none`), so a link opens the room that way; on a first visit it

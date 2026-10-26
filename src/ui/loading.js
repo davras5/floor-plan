@@ -67,11 +67,12 @@ export function createLoading({ bar, status, text, main }) {
     managerTotal = total;
     update();
   };
-  manager.onLoad = manager.onError = () => {
+  manager.onLoad = () => {
     managerActive = false;
     managerLoaded = managerTotal = 0;
     update();
   };
+  manager.onError = () => update(); // the others are still loading; onLoad comes when all are done
 
   return {
     // What's loading right now (for tests and debugging).

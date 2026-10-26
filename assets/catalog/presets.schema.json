@@ -313,6 +313,26 @@
           "type": "string",
           "description": "The whole preset in a sentence (tooltip)."
         },
+        "pendant": {
+          "description": "Where the existing pendant hangs in this preset: swagged on a longer cord from a ceiling hook at (x, z), its shade's bottom `bottom` metres up (over a table: 65–75 cm above the top). Presets without it hang the pendant from its outlet, at the height in src/config.js.",
+          "type": "object",
+          "required": [
+            "x",
+            "z"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "x": {
+              "type": "number"
+            },
+            "z": {
+              "type": "number"
+            },
+            "bottom": {
+              "type": "number"
+            }
+          }
+        },
         "pieces": {
           "description": "By piece id, or by product id for every piece of that product (the four chairs). Pieces it doesn't name keep what they have.",
           "type": "object",

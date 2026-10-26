@@ -24,6 +24,10 @@ import { createPieceLights } from './lighting/piece-lights.js';
 import { createContactShadows } from './scene/contact-shadows.js';
 import { createSettings } from './ui/settings.js';
 import { createDiagnostics } from './ui/diagnostics.js';
+import { createLayoutCheck } from './furniture/layout-check.js';
+import { createLayoutOverlay } from './scene/layout-overlay.js';
+import { createLayoutCard } from './ui/layout-card.js';
+import { createSunControl } from './ui/sun.js';
 
 const W = ROOM.width, L = ROOM.length, H = ROOM.height, T = ROOM.wallThickness;
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -143,18 +147,68 @@ const lighting = createLighting(scene, ROOM, room.layout, room.outdoors.skyUnifo
 lighting.setShadowSizes(Q().sunShadow, Q().lampShadow);
 // A new finish only changes the light; moving a piece or a new model changes shadows too.
 let contact = null, pieceLights = null; // contact shadows and the floor lamp's light (below)
+// what: 'move' (a piece moved or turned: its materials, contact shadow and lights come along
+// with it), 'light' (a new finish: only the light changes) or anything else (a new model, a piece
+// added or taken out).
 const furniture = new Furniture(ROOM, renderer, (what) => {
-  windowSun.patchAll(furniture.group); // new models and finishes are new materials
-  contact?.sync();
-  if (pieceLights) lighting.setPieceLights(pieceLights());
+  if (what !== 'move') {
+    windowSun.patchAll(furniture.group); // new models and finishes are new materials
+    contact?.sync();
+    if (pieceLights) lighting.setPieceLights(pieceLights());
+  }
   if (what === 'light') lightChanged();
   else shadowsChanged();
-}, { anisotropy: Q().anisotropy });
+  refreshCheck();
+}, {
+  anisotropy: Q().anisotropy,
+  // A preset can swag the pendant over a table: the shade, its cord and the lamp's light move.
+  onHang: (hang) => {
+    if (!pendant.setHang(hang)) return;
+    lighting.lamp.position.copy(pendant.lightPosition);
+    shadowsChanged();
+    renderEditor?.();
+  },
+});
 scene.add(furniture.group, furniture.overlay); // the overlay: the info card
 // Contact shadows under the furniture, for the simple path (scene/contact-shadows.js).
 contact = createContactShadows(furniture);
 // A floor lamp's light hangs from the lamp and comes on with the ceiling light (lighting/piece-lights.js).
 pieceLights = createPieceLights(furniture, Q().lampShadow);
+
+// ---- The layout check (furniture/layout-check.js): the room against the layout review's rules ----
+// The doors, their swings and the window as the check needs them, from the room's layout.
+const checkRoom = (() => {
+  const { win, bal, door, frameZ, P } = room.layout;
+  const hx = bal.x1 - P, r = bal.x1 - bal.x0 - 2 * P; // the balcony door's hinge and swing
+  const entrySwing = { x0: door.x0, x1: door.x1, z0: L - door.width, z1: L };
+  return {
+    W, L, entry: { x0: door.x0, x1: door.x1 }, balcony: { x0: bal.x0, x1: bal.x1 },
+    swings: [entrySwing, { x0: hx - r, x1: hx, z0: 0, z1: frameZ + r }], entrySwing,
+    openings: { north: [[win.x0, win.x1], [bal.x0, bal.x1]], south: [[door.x0 - 0.1, door.x1 + 0.1]] },
+    pendant: pendant.position,
+  };
+})();
+const layoutCheck = createLayoutCheck(checkRoom);
+const pendantFor = (hang) => (hang ? { x: hang.x, z: hang.z, bottom: hang.bottom ?? ROOM.pendant.bottom, radius: ROOM.pendant.width / 2 } : checkRoom.pendant);
+const overlay = createLayoutOverlay();
+scene.add(overlay.group);
+const layoutCard = createLayoutCard({
+  toggle: document.getElementById('card-toggle'), score: document.getElementById('check-score'), list: document.getElementById('check-list'),
+  overlay, invalidate,
+});
+// Checked again a moment after the furniture changes (a drag changes it every frame).
+let checkTimer = 0;
+function refreshCheck() {
+  clearTimeout(checkTimer);
+  checkTimer = setTimeout(() => {
+    const furnished = state.furniture && furniture.items.length > 0;
+    try {
+      layoutCard.render(furnished ? layoutCheck(furniture.floorPieces(), furniture.wallArt(), pendant.position) : null);
+    } catch (err) {
+      console.warn('Layout check failed:', err);
+    }
+  }, 150);
+}
 
 const state = { mode: 'orbit', dims: false, furniture: true, edit: false };
 let camera;
@@ -211,12 +265,12 @@ plan.addEventListener('change', () => {
 const walkCam = new THREE.PerspectiveCamera(70, 1, 0.1, 1500);
 const walk = new WalkControls(walkCam, canvas, { minX: 0.25, maxX: W - 0.25, minZ: 0.25, maxZ: L - 0.3 }, ROOM.person.eye);
 // You walk around furniture, and around the pendant when its shade hangs lower than your head.
-const shade = (() => {
-  const { x, z } = ROOM.ceilingOutlet, r = ROOM.pendant.width / 2;
+function shade() {
+  const { x, z, radius: r } = pendant.position;
   return { x0: x - r, x1: x + r, z0: z - r, z1: z + r };
-})();
+}
 walk.instant = reduceMotion; // with reduced motion, tapping the floor moves you there at once
-walk.obstacles = () => [...furniture.obstacles(),...(pendant.group.visible && ROOM.pendant.bottom < ROOM.person.height ? [shade] : [])];
+walk.obstacles = () => [...furniture.obstacles(), ...(pendant.group.visible && pendant.position.bottom < ROOM.person.height ? [shade()] : [])];
 walk.arrowsEnabled = () => !(state.edit && furniture.selected); // then the arrows nudge the piece
 
 // Start just inside the entry door, looking toward the far corner (like the photo from the door).
@@ -373,6 +427,7 @@ function setFurniture(on) {
   furniture.group.visible = on;
   if (!on && furniture.selected) selectItem(null);
   shadowsChanged();
+  refreshCheck();
 }
 
 // The ceiling light ('auto': on once it's dark, or 'on' / 'off'), and the doors. Normally set
@@ -430,6 +485,7 @@ function syncSill() {
 
 // ---- Picking: measuring, tap-to-walk, furniture -----------------------------
 const raycaster = new THREE.Raycaster();
+raycaster.firstHitOnly = true; // the nearest hit is all that's wanted (three-mesh-bvh, furniture.js)
 const ndc = new THREE.Vector2();
 
 function aim(e) {
@@ -568,6 +624,7 @@ const { selectItem, undo, renderEditor, openPreset, linkedPreset, dragging } = c
   setEdit: (on) => setEdit(on),
   setFurniture: (on) => state.furniture !== on && setFurniture(on), // the None preset, and back
   getCamera: () => camera,
+  scoreOf: ({ pieces, art, pendant: hang }) => layoutCheck(pieces, art, pendantFor(hang)),
 });
 
 // ---- Theme: dimension lines follow the page's light/dark tokens -------------
@@ -637,9 +694,12 @@ shadowCamera.updateMatrixWorld();
 function renderShadows() {
   syncWindowSun();
   if (renderer.shadowMap.enabled) {
+    const clear = renderer.autoClear;
+    renderer.autoClear = false; // the pass draws nothing to the screen, so it mustn't clear it either
     renderer.shadowMap.needsUpdate = true;
     renderer.render(scene, shadowCamera);
     renderer.shadowMap.needsUpdate = false;
+    renderer.autoClear = clear;
   }
   shadowsDirty = false;
 }
@@ -725,6 +785,9 @@ let firstCompile = null, firstCompiled = !parallelCompile;
 function loop() {
   const dt = Math.min(clock.getDelta(), 0.05);
   const now = performance.now();
+  // A lost context is told to three by an event, which can come after the next frame; a program
+  // compiled in between throws on a null shader log. The frame waits (the restore redraws).
+  if (renderer.getContext().isContextLost()) return;
   if (first && !(requested.furniture && requested.surroundings) && now < gateUntil) return;
   if (first && !firstCompiled) {
     if (!firstCompile) {
@@ -796,7 +859,20 @@ function loop() {
 // reason for setAnimationLoop, isn't used here).
 function tick() {
   if (!looping) return;
-  loop();
+  try {
+    loop();
+  } catch (err) {
+    // The loop stops, and the next input starts it again (wake); the panel says what happened.
+    // While the context is lost an error is a consequence of that, and the context panel says it all.
+    looping = false;
+    if (renderer.getContext().isContextLost()) {
+      console.warn('A frame failed while the WebGL context was lost:', err.message);
+      return;
+    }
+    console.error(err);
+    diagnostics.report(`The 3D view hit an error (${err.message}). It carries on with the next tap or key; reload if it doesn't.`, err);
+    return;
+  }
   if (looping) requestAnimationFrame(tick);
 }
 wake = () => {
@@ -823,6 +899,7 @@ loading.track('Loading furniture', furniture.load({ preset: linked })).then(
     if (link) openPreset(link);
     renderEditor();
     describeRoom();
+    furniture.optionsReady?.then(() => renderEditor()); // the presets' scores, once every option file is in
     window.__furnitureReady = true;
   },
   (err) => {
@@ -838,12 +915,19 @@ const sunTime = document.getElementById('sun-time');
 const sunMonth = document.getElementById('sun-month');
 const sunLabel = document.getElementById('sun-label');
 sunMonth.value = '9'; // October
+// Always the 21st of the month (see updateSun); the Sun control asks where the sun is at a given time.
+const dayOf = (month) => new Date(Date.UTC(new Date().getFullYear(), Number(month), 21, 12));
+const sunControl = createSunControl({
+  button: document.getElementById('sun-button'), more: document.getElementById('sun-more'), panel: document.getElementById('sun-panel'),
+  time: sunTime, month: sunMonth, announce: (text) => announce(text),
+  elevationAt: (hours, month) => sunPosition(zurichTime(Math.floor(hours), Math.round((hours % 1) * 60), dayOf(month)), ROOM.site.lat, ROOM.site.lon).elevation,
+});
 
 function updateSun() {
   if (!surroundings) return;
   // Always the 21st of the month (it also gives the solstices and equinoxes), so a setting
   // looks the same whenever the page is opened.
-  const day = new Date(Date.UTC(new Date().getFullYear(), Number(sunMonth.value), 21, 12));
+  const day = dayOf(sunMonth.value);
   const hours = Number(sunTime.value);
   const { azimuth, elevation } = sunPosition(zurichTime(Math.floor(hours), Math.round((hours % 1) * 60), day), ROOM.site.lat, ROOM.site.lon);
   const lightsWere = lighting.lightsKey;
@@ -854,6 +938,7 @@ function updateSun() {
   const hh = String(Math.floor(hours)).padStart(2, '0'), mm = String(Math.round((hours % 1) * 60)).padStart(2, '0');
   sunLabel.textContent = elevation > 0 ? `${hh}:${mm}` : `${hh}:${mm} · set`;
   sunTime.setAttribute('aria-valuetext', `${hh}:${mm}${elevation > 0 ? '' : ', after sunset'}`);
+  sunControl.render();
   shadowsChanged();
 }
 sunTime.addEventListener('input', updateSun);
@@ -899,11 +984,11 @@ addEventListener('blur', () => pointers.clear());
 function prepareCapture() {
   const cut = room.walls.filter((w) => w.cut);
   const caps = room.walls.flatMap((w) => (w.caps ? [w.caps.stub, w.caps.plan] : [])).filter((c) => c.visible);
-  const shown = [room.outdoors.group, room.hallway, notes.group, notes.measure, pendant.group, furniture.popup?.object].filter(Boolean).map((o) => [o, o.visible]);
+  const shown = [room.outdoors.group, room.hallway, notes.group, notes.measure, pendant.group, overlay.group, furniture.popup?.object].filter(Boolean).map((o) => [o, o.visible]);
   for (const w of cut) setCut(w, false);
   for (const c of caps) c.visible = false;
   room.outdoors.group.visible = room.hallway.visible = true;
-  notes.group.visible = notes.measure.visible = pendant.group.visible = false;
+  notes.group.visible = notes.measure.visible = pendant.group.visible = overlay.group.visible = false;
   if (furniture.popup) furniture.popup.object.visible = false;
   return () => {
     for (const w of cut) setCut(w, true);
@@ -991,8 +1076,8 @@ loading.track('Loading the neighbourhood', loadSurroundings(ROOM, { anisotropy: 
     room.outdoors.scenery.visible = false;
     s.setVisible(state.mode === 'walk');
     updateSun();
-    document.getElementById('sun-controls').hidden = false;
-    document.getElementById('attribution').hidden = false;
+    sunControl.enable();
+    for (const a of document.querySelectorAll('.attribution')) a.hidden = false;
     window.__surroundingsReady = true;
     shadowsChanged();
   },
@@ -1047,6 +1132,6 @@ window.roomApp = {
   views: { orbitCam, orbit, planCam, plan, walkCam },
   get surroundings() { return surroundings; },
   quality, settings, diagnostics, windowSun, contact,
-  loading,
+  loading, layoutCheck, layoutCard, overlay, sunControl,
   setMode, setEdit, setLamp, setDoors, setDims, setFurniture, selectItem, undo, invalidate, shadowsChanged, announce, fixtures,
 };
