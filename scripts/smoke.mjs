@@ -167,12 +167,61 @@ try {
   await mouse('mouseReleased', 760, 420);
   if (still !== (await run('JSON.stringify(roomApp.furniture.items.map((i) => [i.x, i.z]))'))) problems.push('view mode: a drag moved furniture');
 
+  // Settings: the gear opens a labelled dialog with focus inside; Esc closes it and focus goes
+  // back to the gear; "Show measurements" works; a quality level applies live.
+  const key = (k, code = k) => send('Input.dispatchKeyEvent', { type: 'keyDown', key: k, code, windowsVirtualKeyCode: { Escape: 27, ArrowDown: 40, ArrowUp: 38 }[k] ?? 0 })
+    .then(() => send('Input.dispatchKeyEvent', { type: 'keyUp', key: k, code }));
+  const panelOpen = () => run("!document.getElementById('settings').hidden");
+  await run("document.getElementById('settings-button').focus(); document.getElementById('settings-button').click()");
+  if (!(await panelOpen())) problems.push('settings: the gear did not open the panel');
+  const dialog = await run(`(() => { const p = document.getElementById('settings'); const t = document.getElementById(p.getAttribute('aria-labelledby'));
+    return { role: p.getAttribute('role'), title: t?.textContent, focusInside: p.contains(document.activeElement), expanded: document.getElementById('settings-button').getAttribute('aria-expanded'),
+      name: document.getElementById('settings-button').getAttribute('aria-label'), radios: p.querySelectorAll('input[type=radio]').length }; })()`);
+  if (dialog.role !== 'dialog' || !dialog.title || !dialog.focusInside || dialog.expanded !== 'true' || !dialog.name || dialog.radios !== 4) problems.push(`settings: dialog semantics ${JSON.stringify(dialog)}`);
+  await shot('settings-open');
+  await key('Escape');
+  if (await panelOpen()) problems.push('settings: Esc did not close the panel');
+  if (!(await run("document.activeElement === document.getElementById('settings-button')"))) problems.push('settings: focus did not return to the gear');
+  await run("document.getElementById('settings-button').click(); document.getElementById('settings-dims').click()");
+  if (!(await run("roomApp.scene.getObjectByName('annotations').visible"))) problems.push('settings: Show measurements did not show them');
+  await run("document.getElementById('settings-dims').click()");
+  // Battery saver from the panel: lower resolution at once, and a reload offered for antialiasing.
+  await run("document.getElementById('settings-q-low').click()");
+  await sleep(1500);
+  const low = await run(`({ level: roomApp.quality.level, ratio: roomApp.renderer.getPixelRatio(), reload: !document.querySelector('#settings .settings-reload').hidden, sun: roomApp.lighting.sun.shadow.mapSize.x })`);
+  // (The reload note shows exactly when the page was loaded with antialiasing, which Battery saver turns off.)
+  if (low.level !== 'low' || low.ratio > 1 || low.sun !== 1024 || low.reload !== (await run('roomApp.quality.antialias'))) problems.push(`settings: Battery saver not applied ${JSON.stringify(low)}`);
+  await shot('settings-low');
+  // Arrow keys move between the levels (native radios).
+  await run("document.getElementById('settings-q-low').focus()");
+  await key('ArrowDown');
+  if ((await run('roomApp.quality.choice')) !== 'medium') problems.push('settings: arrow keys did not move to the next level');
+  await run("document.getElementById('settings-q-auto').click()");
+  await key('Escape');
+  await run('roomApp.quality.set("high")');
+
   // Phone layout.
   await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });
+  await send('Emulation.setTouchEmulationEnabled', { enabled: true });
   await run("roomApp.setMode('orbit')");
   await shot('phone-orbit');
   const overflow = await run('document.documentElement.scrollWidth > window.innerWidth');
   if (overflow) problems.push('phone: the page scrolls sideways');
+  // The settings panel on phones: inside the screen, finger-sized targets, the toolbar one row.
+  for (const width of [390, 360]) {
+    await send('Emulation.setDeviceMetricsOverride', { width, height: 780, deviceScaleFactor: 2, mobile: true });
+    await sleep(400);
+    const rows = await run("new Set([...document.querySelectorAll('#dock > .group')].map((g) => Math.round(g.getBoundingClientRect().top))).size");
+    if (rows !== 1) problems.push(`phone ${width}: the toolbar wraps to ${rows} rows`);
+    await run("document.getElementById('settings-button').click()");
+    await sleep(300);
+    const fit = await run(`(() => { const p = document.getElementById('settings').getBoundingClientRect();
+      const small = [...document.querySelectorAll('#settings label, #settings button:not([hidden]), #settings-button')].filter((e) => e.offsetParent && e.getBoundingClientRect().height < 44).map((e) => e.id || e.className);
+      return { inside: p.left >= 0 && p.right <= innerWidth && p.top >= 0 && p.bottom <= innerHeight, overflow: document.documentElement.scrollWidth > innerWidth, small }; })()`);
+    if (!fit.inside || fit.overflow || fit.small.length) problems.push(`phone ${width}: settings panel ${JSON.stringify(fit)}`);
+    await shot(`phone-${width}-settings`);
+    await key('Escape');
+  }
 
   ws.close();
 } catch (err) {

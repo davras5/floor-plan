@@ -69,6 +69,7 @@ export class Furniture {
     // it next to the piece on screen. `popupBounds()` gives the free band between the UI panels.
     this.popupBounds = null;
     this.popup = infoPopup(this);
+    this.started = new Promise((resolve) => (this.markStarted = resolve));
     this.overlay = new THREE.Group();
     this.overlay.name = 'info card';
     this.overlay.add(this.popup.object);
@@ -77,17 +78,28 @@ export class Furniture {
   // preset: the one a link names (#preset=…). A first visit starts as that one, or the default
   // preset: its products are loaded straight away, then it puts on its finishes and places.
   // Otherwise the room is as the viewer left it (the editor then applies a linked preset).
+  //
+  // Every download starts at once: each piece's model is fetched alongside its options file
+  // (the options only decide between models in the rare case of a variant, such as castors).
+  // `started` resolves once all the requests are out (main.js holds the first frame for it, as
+  // that frame's shader compiles keep the main thread busy for a while).
   async load({ preset = null } = {}) {
-    await loadCatalog();
+    try {
+      await loadCatalog();
+    } finally {
+      this.markStarted();
+    }
     this.presets = PRESETS;
     this.defaultPreset = DEFAULT_PRESET;
     const saved = readSaved();
     const finishes = readFinishes();
     const fresh = !Object.keys(finishes).length && !Object.keys(saved).length;
     const start = fresh ? PRESETS.find((p) => p.id === preset) ?? PRESETS.find((p) => p.id === DEFAULT_PRESET) : null;
-    const loaded = await Promise.all(LAYOUT.map(async (entry) => {
+    const loading = Promise.all(LAYOUT.map(async (entry) => {
       const kept = finishes[entry.id] ?? (start ? { product: this.presetFor(start, { id: entry.id, home: entry })?.item } : {});
       const key = CATALOG[kept.product] && (entry.alternatives ?? [entry.item]).includes(kept.product) ? kept.product : entry.item;
+      // The usual model, while the options load (a piece with its own choices may want another).
+      if (!kept.choices) prefetchModel(`${key}#standard`, CATALOG[key].model, this.aniso, !!CATALOG[key].footprint);
       const options = await loadOptions(CATALOG[key].options);
       const pivot = new THREE.Group();
       pivot.name = entry.id;
@@ -105,6 +117,8 @@ export class Furniture {
       await this.paintAll(item);
       return item;
     }));
+    this.markStarted();
+    const loaded = await loading;
     this.items.push(...loaded);
     // Pieces placed by another (the pouf by the sofa, which makes room for it; chairs around the
     // table) go there once all are known. LAYOUT lists each piece after the one it depends on.
@@ -731,6 +745,13 @@ async function loadModel(key, def, aniso, keepOrigin = false) {
     meshes.push(o);
   });
   return { object, meshes, partDefs: t.partDefs, size: t.size.clone(), local: t.local.clone(), materials: [...own.values()] };
+}
+
+// Starts loading a model that's likely to be needed (loadModel then finds it under the same key).
+function prefetchModel(key, def, aniso, keepOrigin) {
+  if (templates.has(key)) return;
+  templates.set(key, loadTemplate(def, aniso, keepOrigin));
+  templates.get(key).catch(() => {}); // if it isn't used after all, a failure isn't worth a warning
 }
 
 // OBJ files are split into the catalog's parts by group name, each with the part's material.

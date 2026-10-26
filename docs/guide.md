@@ -21,7 +21,7 @@ Opening `index.html` straight from disk won't work, because browsers block ES mo
 | --- | --- |
 | **3D** | Drag to orbit, scroll or pinch to zoom (toward the pointer), right-drag to pan. Double-click to glide to a spot. Walls facing you drop to a low cut so you can see in. |
 | **Plan** | Top-down, cut at 1.2 m like an architectural plan. Drag to pan, scroll or pinch to zoom. |
-| **Walk** | Eyes at 1.59 m, as for a 1.70 m person (`person` in `src/config.js`). Like a PC game: click the view to capture the mouse, then the mouse looks around, WASD walks and strafes, Shift runs, Q/E or ←/→ turn, and a click acts on what's under the crosshair (a piece or fitting opens its card); Esc gives the mouse back. While editing, or where the page can't capture the mouse, drag to look. On touch screens, twin-stick: the left thumb is a joystick that walks you (push further to go faster), the right thumb drags to look, and a tap on the floor walks you there. You walk around furniture, not through it. |
+| **Walk** | Eyes at 1.59 m, as for a 1.70 m person (`person` in `src/config.js`). Like a PC game: hold the left mouse button and drag to look around (right turns right, up looks up); WASD walks and strafes, Shift runs, Q/E or ←/→ turn. Otherwise the mouse is an ordinary pointer: a click on a piece or fitting opens its card, a click on the floor walks you there. On touch screens, twin-stick: the left thumb is a joystick that walks you (push further to go faster), the right thumb drags to look, and a tap on the floor walks you there. You walk around furniture, not through it. |
 
 Press the active view's button again to reset its camera (Walk goes back to the entry door).
 Panning can't lose the room: the camera's focus point stays in or near it.
@@ -123,7 +123,7 @@ places and rotations). [docs/catalog.md](catalog.md) describes both; JSON schema
 let an editor check them as you type, and `npm test` checks that every preset only picks options
 the maker sells.
 
-A first visit starts with the **Wood & white** preset:
+A first visit starts with the **Outline 2-seater + pouf, Steelcut 220** preset (`#preset=wood-white`):
 
 - **Muuto Outline Soft Sofa, 2-seater** (170 × 84 cm, Steelcut 220 on polished aluminium legs), back
   against the left wall, 45 cm from the window wall.
@@ -161,16 +161,17 @@ and **Shop**, a link to exactly that configuration at muuto.com. A plant's card 
 comes from. In Walk the tap also walks you up to it. **Change finish** on the card, or Esc / × / a tap
 elsewhere to close it. The selection gets a yellow outline around its silhouette.
 
-**Presets**, top right, set the whole room in one tap, in any view and without Edit: *Wood & white*,
-*Outline 2-seater + pouf* (in Clay 12, with an all-grey linoleum Soft Side Table), *Grey (as
-delivered)* (the In Situ in Clay 12, the oak table on grey) and *Warm light* (the In Situ in Ecriture
-210, ochre shells, a Beige Green table). Each shows its colours (sofa, chair shell, wood, table top),
-and the one the room matches has a check. If you've made your own changes, picking a preset keeps
+**Presets**, top right, set the whole room in one tap, in any view and without Edit. Each is named by
+product, configuration and fabric, with the rest below in the same order (legs or frame · side table ·
+chairs): *Outline 2-seater + pouf, Steelcut 220* (the default), *Outline 2-seater + pouf, Clay 12*,
+*Outline 2-seater, Steelcut 220* (no pouf; the side table stands in front of the window-end seat
+instead), *In Situ 2-seater with chaise, Clay 12* and *In Situ 2-seater with chaise, Ecriture 210*.
+Each shows its colours (sofa, chair shell, wood, table top), and the one the room matches has a check. If you've made your own changes, picking a preset keeps
 them under **Custom**, so you can go back to them. **None** shows the empty room (the furniture is
 hidden, not changed). Each pick is one undo step. The preset is in the page's link
 (`#preset=wood-white`, or `#preset=none`), so a link opens the room that way; on a first visit it
 loads directly, otherwise it's applied over your own room, which stays under Custom. On phones the
-list folds to one line, "Presets · Wood & white".
+list folds to one line, "Presets · Outline 2-seater + pouf, Steelcut 220".
 
 Turn on **Edit** (works in every view, including Walk). Then tap or click a piece, or pick it from
 the list in the edit bar, and:

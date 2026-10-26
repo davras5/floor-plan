@@ -1,7 +1,8 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { parquetTextureAsync, PARQUET_AVERAGE, tileTexture } from './textures.js';
 import { cornerAO } from '../lighting/corner-ao.js';
-import { boxProjectedReflections, noShadowNormalBias } from '../lighting/shader-hooks.js';
+import { boxProjectedReflections, noShadowNormalBias, noAreaLights } from '../lighting/shader-hooks.js';
 
 // Where the room's light probe sits (indirect.js): the middle of the room, at 1.2 m. The
 // ceiling has its own, just below it (see main.js).
@@ -44,6 +45,8 @@ export function buildRoom(R, renderer, { anisotropy, floorDetail = 400 } = {}) {
   // so the windows' reflections stay put on the floor as you move.
   boxProjectedReflections(M.floor, roomBox, PROBE(R));
   noShadowNormalBias(M.floor);
+  // The balcony is outside, behind the window's area lights (which shine one way, into the room).
+  for (const m of [M.concrete, M.rail, M.mesh]) noAreaLights(m);
 
   // Positions derived from the config, in room coordinates.
   const frameZ = -R.window.reveal; // room-side face of the window and balcony-door frames
@@ -289,6 +292,11 @@ export function buildRoom(R, renderer, { anisotropy, floorDetail = 400 } = {}) {
   ];
 
   // floorReady(): resolves when the current parquet texture is on the floor.
+  // The room is built from about 130 small boxes. Drawn one by one, that's a draw call each, in
+  // every frame and 18 times in every light capture. Within each wall, door, sash and the
+  // balcony, boxes of the same material are merged (moving parts keep their own pivot).
+  for (const g of [north, south, west, east, ceiling, hallway, balcony, doorPivot, narrowPivot, widePivot, balPivot]) mergeBoxes(g);
+
   return { root, floor, walls, hallway, balcony, outdoors, doors, layout, materials: M, setFloorDetail, floorReady: () => floorJob };
 
   // ---- helpers that need the materials ------------------------------------
@@ -431,6 +439,37 @@ function rectFrame(parent, mat, x0, x1, y0, y1, p, z0, z1, bottom) {
   const jh = y1 - y0 - s.t - s.b, jy = y0 + s.b + jh / 2;
   addBox(parent, mat, s.l, jh, d, x0 + s.l / 2, jy, zm);
   addBox(parent, mat, s.r, jh, d, x1 - s.r / 2, jy, zm);
+}
+
+// Merges a group's own meshes (not its subgroups') that share a material, shadow flags and draw
+// order into one mesh each.
+function mergeBoxes(group) {
+  const bins = new Map();
+  for (const m of group.children) {
+    if (!m.isMesh || !m.geometry.index) continue;
+    const key = `${m.material.uuid}|${m.castShadow}|${m.receiveShadow}|${m.renderOrder}`;
+    if (!bins.has(key)) bins.set(key, []);
+    bins.get(key).push(m);
+  }
+  for (const list of bins.values()) {
+    if (list.length < 2) continue;
+    const geometry = mergeGeometries(list.map((m) => {
+      m.updateMatrix();
+      return m.geometry.clone().applyMatrix4(m.matrix);
+    }));
+    if (!geometry) continue;
+    const [first] = list;
+    const merged = new THREE.Mesh(geometry, first.material);
+    merged.castShadow = first.castShadow;
+    merged.receiveShadow = first.receiveShadow;
+    merged.renderOrder = first.renderOrder;
+    merged.name = `${group.name || 'part'} · ${first.material.name || first.material.type} × ${list.length}`;
+    for (const m of list) {
+      group.remove(m);
+      m.geometry.dispose();
+    }
+    group.add(merged);
+  }
 }
 
 function addBox(parent, mat, sx, sy, sz, x, y, z, { cast = true, receive = true } = {}) {

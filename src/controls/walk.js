@@ -2,9 +2,8 @@ import * as THREE from 'three';
 import { damp } from '../util.js';
 
 // First-person walking at eye height, like a PC game:
-//   mouse      click the view to capture the mouse (pointer lock); moving it looks around, and
-//              Esc gives it back. Where pointer lock isn't allowed (some embeddings) or while
-//              editing (the cursor is needed to drag furniture), drag to look instead.
+//   mouse      hold the left button and drag to look around (right turns right, up looks up);
+//              otherwise it's an ordinary pointer, and a click acts on what's under it (main.js).
 //   keyboard   WASD (or ↑/↓) to walk and strafe, Shift to run, Q/E or ←/→ to turn.
 //   touch      twin-stick: a thumb on the left half of the view is a joystick that walks you
 //              (as far as you push it, that fast); a thumb on the right half drags to look.
@@ -22,7 +21,7 @@ const KEYS = {
   run: ['ShiftLeft', 'ShiftRight'],
 };
 const ALL_KEYS = Object.values(KEYS).flat();
-const LOOK = { mouse: 0.0022, drag: 0.0045, touch: 0.006 }; // radians per pixel
+const LOOK = { mouse: 0.0045, touch: 0.006 }; // radians per pixel dragged
 const STICK = 52; // px: the joystick's reach
 const RUN = 1.9; // running speed, × walking
 
@@ -46,11 +45,8 @@ export class WalkControls {
     this.keys = new Set();
     this.stick = new THREE.Vector2(); // the touch joystick, -1…1 (y down = back)
     this.dirty = true;
-    this.locked = false; // the mouse is captured (pointer lock)
     this.obstacles = () => []; // furniture footprints {x0, x1, z0, z1} to walk around
     this.arrowsEnabled = () => true; // main.js turns arrows off while they nudge furniture
-    this.lockAllowed = () => true; // main.js: not while editing
-    this.onLockChange = () => {}; // main.js shows the crosshair and the right hint
     camera.rotation.order = 'YXZ';
 
     // The joystick drawn under the left thumb.
@@ -70,8 +66,6 @@ export class WalkControls {
         dom.setPointerCapture(id);
       } catch {}
     };
-    // A press that captures the mouse shouldn't also count as a click on what's under it.
-    this.consumeClick = false;
     dom.addEventListener('pointerdown', (e) => {
       if (!this.enabled) return;
       if (e.pointerType === 'touch') {
@@ -84,34 +78,12 @@ export class WalkControls {
         capture(e.pointerId);
         return;
       }
-      if (e.button !== 0 || this.locked) return;
-      if (this.lockAllowed() && dom.requestPointerLock && !this.lockFailed) {
-        this.consumeClick = true;
-        try {
-          const p = dom.requestPointerLock({ unadjustedMovement: true });
-          // Where unadjusted movement isn't supported, the plain request still works.
-          p?.catch?.(() => dom.requestPointerLock()?.catch?.(() => (this.lockFailed = true)));
-        } catch {
-          this.lockFailed = true;
-        }
-        return;
-      }
+      if (e.button !== 0) return;
       look = { id: e.pointerId, x: e.clientX, y: e.clientY };
       capture(e.pointerId);
     });
-    document.addEventListener('pointerlockerror', () => (this.lockFailed = true));
-    document.addEventListener('pointerlockchange', () => {
-      this.locked = document.pointerLockElement === dom;
-      if (!this.locked) this.consumeClick = false;
-      this.keys.clear();
-      this.onLockChange(this.locked);
-    });
     dom.addEventListener('pointermove', (e) => {
       if (!this.enabled) return;
-      if (this.locked) {
-        this.look(e.movementX, e.movementY, LOOK.mouse);
-        return;
-      }
       if (move && move.id === e.pointerId) {
         let dx = e.clientX - move.x, dy = e.clientY - move.y;
         const len = Math.hypot(dx, dy);
@@ -121,7 +93,7 @@ export class WalkControls {
         this.showStick(move.x - r.left, move.y - r.top, dx, dy);
         this.dirty = true;
       } else if (look && look.id === e.pointerId) {
-        this.look(e.clientX - look.x, e.clientY - look.y, e.pointerType === 'touch' ? LOOK.touch : LOOK.drag);
+        this.look(e.clientX - look.x, e.clientY - look.y, e.pointerType === 'touch' ? LOOK.touch : LOOK.mouse);
         look.x = e.clientX;
         look.y = e.clientY;
       }
@@ -160,9 +132,8 @@ export class WalkControls {
     this.knobEl.style.transform = `translate(${dx}px, ${dy}px)`;
   }
 
-  // Give the mouse back (leaving Walk, opening an info card).
+  // Let go of the joystick (leaving Walk).
   release() {
-    if (this.locked) document.exitPointerLock?.();
     this.stick.set(0, 0);
     this.stickEl.hidden = true;
   }

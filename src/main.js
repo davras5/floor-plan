@@ -175,13 +175,6 @@ const shade = (() => {
 walk.instant = reduceMotion; // with reduced motion, tapping the floor moves you there at once
 walk.obstacles = () => [...furniture.obstacles(),...(pendant.group.visible && ROOM.pendant.bottom < ROOM.person.height ? [shade] : [])];
 walk.arrowsEnabled = () => !(state.edit && furniture.selected); // then the arrows nudge the piece
-walk.lockAllowed = () => !state.edit; // editing needs the cursor, to drag furniture
-// While the mouse is captured: a crosshair, and the hint for it.
-walk.onLockChange = (locked) => {
-  document.getElementById('crosshair').hidden = !locked;
-  document.getElementById('hint').classList.toggle('locked', locked);
-  invalidate();
-};
 
 // Start just inside the entry door, looking toward the far corner (like the photo from the door).
 function walkHome() {
@@ -317,7 +310,6 @@ function setMode(mode) {
 
 function setEdit(on) {
   state.edit = on;
-  if (on) walk.release(); // dragging furniture needs the cursor
   foldPanelsForEdit(on);
   if (on && !state.furniture) setFurniture(true);
   if (!on) selectItem(null);
@@ -427,22 +419,6 @@ canvas.addEventListener('pointerup', (e) => {
   const tap = Math.hypot(e.clientX - press.x, e.clientY - press.y) < 6 && performance.now() - press.t < 500;
   press = null;
   if (!tap) return;
-  // The click that captured the mouse for Walk does nothing else.
-  if (walk.consumeClick) {
-    walk.consumeClick = false;
-    return;
-  }
-  // With the mouse captured, a click acts on what's under the crosshair: a piece or fitting
-  // opens its card (and gives the mouse back, to use it); the floor does nothing (keys walk).
-  if (walk.locked) {
-    const r = canvas.getBoundingClientRect();
-    const hit = pickAny({ clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 });
-    if (hit) {
-      walk.release();
-      selectItem(hit.item);
-    }
-    return;
-  }
   if (state.edit) {
     // Pieces are picked (and dragged) by the editor. A tap on a fitting opens its card; a tap
     // on empty space first puts the selection down.
@@ -476,7 +452,7 @@ canvas.addEventListener('pointermove', (e) => {
   if (!hoverMove) requestAnimationFrame(() => {
     const m = hoverMove;
     hoverMove = null;
-    if (m && m.buttons === 0 && !walk.locked) hover(m);
+    if (m && m.buttons === 0) hover(m);
   });
   hoverMove = e;
 });
@@ -593,9 +569,18 @@ const SETTLE = 200;
 let movingUntil = 0, streak = 0, idleFrames = 0, looping = false;
 let lastFrameAt = 0, lastFrameMoving = false, capturesSeen = 0, programsSeen = 0;
 
+// The first frame compiles the room's shaders, which keeps the main thread busy for a while (a
+// second or more on a slow phone). It waits until the furniture's and the neighbourhood's
+// downloads have started (their requests depend on small JSON files, preloaded by index.html),
+// so they arrive during that time instead of after it; but never more than FIRST_FRAME_WAIT.
+const FIRST_FRAME_WAIT = 500;
+const requested = { furniture: false, surroundings: false };
+const gateUntil = performance.now() + FIRST_FRAME_WAIT;
+
 function loop() {
   const dt = Math.min(clock.getDelta(), 0.05);
   const now = performance.now();
+  if (first && !(requested.furniture && requested.surroundings) && now < gateUntil) return;
   let moved = false, changed = false;
   if (state.mode === 'orbit') {
     moved = stepFocus(dt);
@@ -666,6 +651,7 @@ wake();
 // visit loads it directly; otherwise it's applied over the room as the viewer left it (one
 // undo step, their own version kept under Custom).
 const linked = linkedPreset();
+furniture.started.then(() => (requested.furniture = true));
 loading.track('Loading furniture', furniture.load({ preset: linked })).then(
   () => {
     if (!notes.measure.visible) readout.innerHTML = readoutIdle;
@@ -808,7 +794,7 @@ function syncCasters() {
 }
 
 // The real neighbourhood (swisstopo).
-loading.track('Loading the neighbourhood', loadSurroundings(ROOM, { anisotropy: anisotropy(), detail: Q().surroundings })).then(
+loading.track('Loading the neighbourhood', loadSurroundings(ROOM, { anisotropy: anisotropy(), detail: Q().surroundings, onRequested: () => (requested.surroundings = true) })).then(
   (s) => {
     surroundings = s;
     scene.add(s.group);

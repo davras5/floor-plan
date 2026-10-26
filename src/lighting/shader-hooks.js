@@ -82,6 +82,15 @@ export function extraSunShadowBias(material, metres, range) {
   });
 }
 
+// No window area lights for this material. They stand in for the sky seen through the window
+// and balcony door and face into the room, so outdoors (the neighbourhood, the balcony) they add
+// nothing but cost: two lookups and a polygon integral per light per pixel.
+export function noAreaLights(material) {
+  return patchShader(material, 'no-area-lights', (shader) => {
+    shader.fragmentShader = editChunk(shader.fragmentShader, 'lights_fragment_begin', '#if ( NUM_RECT_AREA_LIGHTS > 0 ) && defined( RE_Direct_RectArea )', '#if 0');
+  });
+}
+
 // No normal offset for this receiver. Walls need it; the floor doesn't (it casts nothing),
 // and with it low-sun shadows come loose from the furniture legs.
 export function noShadowNormalBias(material) {

@@ -283,6 +283,7 @@
       "type": "object",
       "required": [
         "id",
+        "maker",
         "name",
         "summary",
         "pieces"
@@ -296,8 +297,13 @@
             "const": "none"
           }
         },
+        "maker": {
+          "type": "string",
+          "description": "Who makes the furniture it chooses, shown above its name: one maker, or several joined with ' · ' (e.g. 'Muuto · HAY'). The catalog check makes sure it matches the products' makers."
+        },
         "name": {
-          "type": "string"
+          "type": "string",
+          "description": "Product, configuration and fabric of its main piece, e.g. 'Outline 2-seater + pouf, Steelcut 220' (the maker is shown with it)."
         },
         "summary": {
           "type": "string",

@@ -108,6 +108,15 @@ for (const preset of presets) {
   const at = `presets.${preset.id}`;
   if (presetIds.has(preset.id) || preset.id === 'none') fail(at, 'duplicate or reserved id');
   presetIds.add(preset.id);
+  // Its maker label lists the makers of the furniture it names (plants aside), no more, no fewer.
+  const makers = new Set();
+  for (const [key, entry] of Object.entries(preset.pieces)) {
+    const piece = pieces.find((p) => p.id === key) ?? pieces.find((p) => p.product === key);
+    const product = products[entry.product ?? piece?.product];
+    if (product && product.category !== 'plant' && entry.present !== false) makers.add(product.maker);
+  }
+  const listed = (preset.maker ?? '').split(' · ').filter(Boolean);
+  if (listed.sort().join() !== [...makers].sort().join()) fail(at, `maker "${preset.maker ?? ''}" should be "${[...makers].join(' · ')}"`);
   for (const [key, entry] of Object.entries(preset.pieces)) {
     // A piece id, or a product id for every piece of that product.
     const targets = pieceIds.has(key) ? pieces.filter((p) => p.id === key) : pieces.filter((p) => p.product === key);

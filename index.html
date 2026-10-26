@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Living Room Planner</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Sans:wght@400;500;600&display=swap">
@@ -191,7 +192,7 @@
 
   /* Presets: whole-room looks, one tap each (None: the empty room). Folds to
      "Presets · <current>" like the room card. */
-  .presets { width: 288px; margin-left: auto; padding: 4px; }
+  .presets { width: 360px; margin-left: auto; padding: 4px; }
   .presets:has(#presets-toggle[aria-expanded="false"]) { width: auto; }
   .presets h2 { margin: 0; font: inherit; }
   #presets-toggle {
@@ -261,6 +262,7 @@
   .preset-dots span + span { margin-left: -4px; }
   .preset-dots .preset-empty { background: transparent; border-style: dashed; box-shadow: none; }
   .preset-text { display: grid; flex: 1; min-width: 0; }
+  .preset-maker { font: 600 9.5px/1.3 var(--font-ui); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
   .preset-name { font: 600 13px/1.25 var(--font-ui); }
   .preset-sum { font-size: 11.5px; line-height: 1.3; color: var(--ink-soft); }
   /* The chosen look shows a check as well as the tint (not colour alone). */
@@ -593,28 +595,11 @@
     .preset { min-height: 48px; }
     .card .attribution a { display: inline-block; padding: 12px 0; margin: -12px 0; }
   }
-  /* Walk's hint: touch gestures on touch screens, keys elsewhere, and what to do once the
-     mouse is captured (src/controls/walk.js). */
-  .hint-touch, .hint-locked { display: none; }
+  /* Walk's hint: touch gestures on touch screens, mouse and keys elsewhere (src/controls/walk.js). */
+  .hint-touch { display: none; }
   @media (hover: none) and (pointer: coarse) {
     .hint-touch { display: inline; }
     .hint-keys { display: none; }
-  }
-  #hint.locked .hint-keys { display: none; }
-  #hint.locked .hint-locked { display: inline; }
-  /* Walk with the mouse captured: a crosshair marks what a click acts on. */
-  .crosshair {
-    position: fixed;
-    z-index: 6; /* over the 3D view, under the panels (see "Layers") */
-    left: 50%;
-    top: 50%;
-    width: 8px;
-    height: 8px;
-    margin: -4px 0 0 -4px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.9);
-    box-shadow: 0 0 0 1.5px rgba(20, 22, 26, 0.55);
-    pointer-events: none;
   }
   /* Walk on touch screens: the joystick under the left thumb. */
   .walk-stick {
@@ -802,6 +787,46 @@
   }
 }
 </script>
+<!-- Loading: every module up front (after the import map, which they need), instead of one
+     level of imports per round trip; and the small JSON files that name the furniture's and
+     the neighbourhood's downloads, so those can start as soon as the app runs. Keep the list
+     in step with the imports; a missing entry only loads a little later. -->
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js">
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/controls/OrbitControls.js">
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/renderers/CSS2DRenderer.js">
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/lights/RectAreaLightUniformsLib.js">
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/lights/RectAreaLightTexturesLib.js">
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/loaders/OBJLoader.js">
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/loaders/GLTFLoader.js">
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/utils/BufferGeometryUtils.js">
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/libs/meshopt_decoder.module.js">
+<link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/environments/RoomEnvironment.js">
+<link rel="modulepreload" href="./src/main.js">
+<link rel="modulepreload" href="./src/config.js">
+<link rel="modulepreload" href="./src/util.js">
+<link rel="modulepreload" href="./src/quality.js">
+<link rel="modulepreload" href="./src/scene/room.js">
+<link rel="modulepreload" href="./src/scene/textures.js">
+<link rel="modulepreload" href="./src/scene/annotations.js">
+<link rel="modulepreload" href="./src/scene/pendant.js">
+<link rel="modulepreload" href="./src/scene/curtains.js">
+<link rel="modulepreload" href="./src/scene/cutaway.js">
+<link rel="modulepreload" href="./src/scene/fixtures.js">
+<link rel="modulepreload" href="./src/scene/surroundings.js">
+<link rel="modulepreload" href="./src/lighting/lighting.js">
+<link rel="modulepreload" href="./src/lighting/indirect.js">
+<link rel="modulepreload" href="./src/lighting/sun.js">
+<link rel="modulepreload" href="./src/lighting/corner-ao.js">
+<link rel="modulepreload" href="./src/lighting/shader-hooks.js">
+<link rel="modulepreload" href="./src/controls/walk.js">
+<link rel="modulepreload" href="./src/furniture/furniture.js">
+<link rel="modulepreload" href="./src/furniture/editor.js">
+<link rel="modulepreload" href="./src/ui/accessibility.js">
+<link rel="modulepreload" href="./src/ui/loading.js">
+<link rel="modulepreload" href="./src/ui/settings.js">
+<link rel="preload" href="assets/catalog/products.json" as="fetch" crossorigin>
+<link rel="preload" href="assets/catalog/presets.json" as="fetch" crossorigin>
+<link rel="preload" href="assets/surroundings/site.json" as="fetch" crossorigin>
 </head>
 <body>
 <div class="top" id="top">
@@ -864,8 +889,7 @@
     <div id="readout">Hover or tap the floor to measure from the walls</div>
     <div id="hint" hidden>
       <span class="hint-touch">Left thumb walks · Right thumb looks around · Tap the floor to walk there</span>
-      <span class="hint-keys">Click the view to look around with the mouse · WASD to walk, Shift to run · Q/E or ←/→ to turn</span>
-      <span class="hint-locked">The mouse looks around · WASD to walk, Shift to run · Click a piece to see it · Esc frees the mouse</span>
+      <span class="hint-keys">Hold the left button and drag to look around · WASD to walk, Shift to run · Click a piece to see it</span>
     </div>
     <div id="editor" class="selection" hidden>
       <div class="sel-info">
@@ -924,7 +948,6 @@
 <!-- Everything after that (furniture, neighbourhood, light, presets): a bar along the top
      edge, and the label in the status row (src/ui/loading.js). -->
 <div id="progress" class="progress" hidden aria-hidden="true"><div class="progress-bar"></div></div>
-<div id="crosshair" class="crosshair" hidden aria-hidden="true"></div>
 
 <script type="module" src="./src/main.js"></script>
 <script>

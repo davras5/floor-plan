@@ -89,8 +89,9 @@
   "presets": [
     {
       "id": "wood-white",
-      "name": "Wood & white",
-      "summary": "Outline + pouf · Steelcut 220",
+      "maker": "Muuto",
+      "name": "Outline 2-seater + pouf, Steelcut 220",
+      "summary": "Aluminium legs · oak side table · white chairs",
       "note": "Outline Soft 2-seater and pouf in off-white Steelcut 220 on polished aluminium legs, an oak Soft Side Table on its pale grey base, white shells on oak, warm grey linoleum table on oak",
       "pieces": {
         "sofa": {
@@ -117,8 +118,9 @@
     },
     {
       "id": "outline-pouf",
-      "name": "Outline 2-seater + pouf",
-      "summary": "Clay 12 on aluminium legs",
+      "maker": "Muuto",
+      "name": "Outline 2-seater + pouf, Clay 12",
+      "summary": "Aluminium legs · grey side table · white chairs",
       "note": "Outline Soft 2-seater and pouf in Clay 12 on polished aluminium legs: an L with a movable foot end, and an all-grey Soft Side Table in linoleum",
       "pieces": {
         "sofa": {
@@ -144,9 +146,39 @@
       }
     },
     {
+      "id": "outline-2-seater",
+      "maker": "Muuto",
+      "name": "Outline 2-seater, Steelcut 220",
+      "summary": "Aluminium legs · oak side table · white chairs",
+      "note": "Outline Soft 2-seater in off-white Steelcut 220 on polished aluminium legs, without the pouf; the oak Soft Side Table on its grey base stands in front of the window-end seat. White shells on oak, warm grey linoleum table on oak",
+      "pieces": {
+        "sofa": {
+          "product": "muuto-outline-soft-2-seater",
+          "choices": {"upholstery": "SA08", "base": "aluminium"},
+          "place": {"left": 0.02, "window": 0.15, "rotation": 90}
+        },
+        "pouf": {"present": false},
+        "coffee-table": {
+          "present": true,
+          "choices": {"size": "48R1", "top": "05", "base": "02"},
+          "place": {"left": 1.193, "window": 0.43, "rotation": 0}
+        },
+        "table": {"choices": {"finish": "02"}, "place": {"left": 0.925, "door": 0.2, "rotation": 90}},
+        "muuto-fiber-side-chair-wood": {"choices": {"shell": "04", "base": "04", "glides": "1"}},
+        "chair-1": {"place": {"left": 0.497, "door": 0.888, "rotation": 90}},
+        "chair-2": {"place": {"left": 0.497, "door": 0.328, "rotation": 90}},
+        "chair-3": {"place": {"left": 1.477, "door": 0.888, "rotation": 270}},
+        "chair-4": {"place": {"left": 1.477, "door": 0.328, "rotation": 270}},
+        "sill-haworthia": {"present": true},
+        "sill-rubber-plant": {"present": true},
+        "sill-snake-plant": {"present": true}
+      }
+    },
+    {
       "id": "grey",
-      "name": "Grey (as delivered)",
-      "summary": "In Situ with chaise · Clay 12",
+      "maker": "Muuto",
+      "name": "In Situ 2-seater with chaise, Clay 12",
+      "summary": "Black frame · oak side table · white chairs",
       "note": "In Situ in Clay 12 with its black frame, an oak Soft Side Table on its pale grey base, white shells on oak, warm grey linoleum table",
       "pieces": {
         "sofa": {
@@ -173,8 +205,9 @@
     },
     {
       "id": "warm-light",
-      "name": "Warm light",
-      "summary": "In Situ · Ecriture 210, ochre chairs",
+      "maker": "Muuto",
+      "name": "In Situ 2-seater with chaise, Ecriture 210",
+      "summary": "Black frame · beige green side table · ochre chairs",
       "note": "In Situ in sandy Ecriture 210, a beige green Soft Side Table, ochre shells on oak, warm grey linoleum table",
       "pieces": {
         "sofa": {

@@ -394,17 +394,21 @@ export function createEditor({ furniture, state, canvas, stage, editor, aim, pic
   // is hidden, not changed). Each look picked is one undo step.
   const presetList = document.getElementById('presets-list');
   const presetCurrent = document.getElementById('presets-current');
-  const presetButton = (id, name, summary, note) => el('button', {
+  // A preset's maker (e.g. "Muuto", or "Muuto · HAY") is a small label above its name.
+  const presetButton = (id, name, summary, note, maker) => el('button', {
     type: 'button', class: 'preset', 'data-preset': id, 'aria-pressed': 'false', disabled: true, title: note,
     on: { click: () => pickPreset(id) },
   }, el('span', { class: 'preset-dots', 'aria-hidden': 'true' }),
-  el('span', { class: 'preset-text' }, el('span', { class: 'preset-name' }, name), el('span', { class: 'preset-sum' }, summary)));
+  el('span', { class: 'preset-text' },
+    maker && el('span', { class: 'preset-maker' }, maker),
+    el('span', { class: 'preset-name' }, name), el('span', { class: 'preset-sum' }, summary)));
+  const fullName = (p) => (p.maker ? `${p.maker} ${p.name}` : p.name);
   // The presets come with the catalog (assets/catalog/presets.json), so the list is built once it
   // has loaded; until then it shows placeholders.
   let customRow = null;
   function buildPresetList() {
     presetList.replaceChildren(
-      ...furniture.presets.map((p) => el('li', {}, presetButton(p.id, p.name, p.summary, p.note))),
+      ...furniture.presets.map((p) => el('li', {}, presetButton(p.id, p.name, p.summary, p.note, p.maker))),
       el('li', { id: 'preset-custom', hidden: true }, presetButton('', 'Custom', 'Your own finishes and pieces')),
       el('li', {}, presetButton('none', 'None', 'The empty room, without furniture')),
     );
@@ -479,7 +483,7 @@ export function createEditor({ furniture, state, canvas, stage, editor, aim, pic
         applying = null;
         renderEditor();
         invalidate();
-        say(preset ? `Look applied: ${preset.name}` : 'Back to your own finishes and pieces');
+        say(preset ? `Preset applied: ${fullName(preset)}` : 'Back to your own finishes and pieces');
         if (queued != null) {
           const next = queued;
           queued = null;
@@ -505,7 +509,8 @@ export function createEditor({ furniture, state, canvas, stage, editor, aim, pic
       b.disabled = !ready;
     }
     customRow.hidden = !(shown === '' || custom);
-    presetCurrent.textContent = shown == null ? '' : shown === 'none' ? 'None' : furniture.presets.find((p) => p.id === shown)?.name ?? 'Custom';
+    const current = furniture.presets.find((p) => p.id === shown);
+    presetCurrent.textContent = shown == null ? '' : shown === 'none' ? 'None' : current ? fullName(current) : 'Custom';
     if (!ready) return;
     if (applying == null && queued == null) showLink(shown || null); // Custom has no link
     // The looks' colours once; Custom's whenever the pieces it shows change.
