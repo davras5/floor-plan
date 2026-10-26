@@ -5,53 +5,57 @@
 // so that one takes effect on the next load (the settings panel offers to reload).
 //
 // What each level sets was chosen by measuring which settings change the cost of a frame, a
-// light capture or the memory used (docs/performance-review.md, second round).
+// light capture or the GPU memory used (docs/performance-review.md, second round). Soft or
+// plain shadows and a smaller light capture made no measurable difference, so every level
+// keeps soft shadows and the 128 px capture.
+//
+// Phones and tablets draw without shadow maps (the simple path, `shadows: false`): the sun comes
+// in through the window openings by calculation (lighting/window-sun.js) and the furniture
+// stands on soft contact shadows (scene/contact-shadows.js). Shadow maps crash some phones'
+// graphics drivers outright (shadowsBlocked below), and on the others they're the costliest pass.
 
 const STORE = 'living-room.quality';
 
 export const LEVELS = {
   low: {
     name: 'Battery saver',
-    summary: 'For older phones: lower resolution, simpler shadows and surroundings.',
+    summary: 'For older phones: about half the graphics memory, lower resolution, simpler surroundings and shadows.',
+    shadows: false, // shadow maps: off is the simple path
     pixelRatio: 1, // the most device pixels per CSS pixel, when the view is still
     movingRatio: 0.75, // the same while the view moves (orbit, walk, drag); full again once still
-    antialias: false,
-    sunShadow: 1024, // shadow map sizes (px)
+    antialias: false, // MSAA: 3–5× a frame's cost in the measurements, and 4× the canvas's memory
+    sunShadow: 1024, // shadow map sizes (px; the lamp's per cube face), when there are shadow maps
     lampShadow: 256,
-    softShadows: false, // PCF instead of PCF-soft
-    probe: 64, // the room's light capture, px per cube face
-    whiteBalancePass: false, // no second capture just for white balance
+    whiteBalancePass: false, // no second light capture just for the white balance
     dragShadows: false, // a dragged piece's shadow follows when it's put down
     anisotropy: 2,
     floorDetail: 280, // px per metre of the parquet texture
-    surroundings: 'low',
+    surroundings: 'low', // coarser terrain and trees, the aerial photo at 1024 px
   },
   medium: {
     name: 'Balanced',
-    summary: 'For most phones and tablets: sharp when still, lighter while moving.',
+    summary: 'For most phones and tablets: simple shadows, sharp when still, lighter while moving.',
+    shadows: false,
     pixelRatio: 1.5,
     movingRatio: 1,
-    antialias: true,
+    antialias: false,
     sunShadow: 1024,
-    lampShadow: 512,
-    softShadows: true,
-    probe: 128,
+    lampShadow: 256,
     whiteBalancePass: true,
     dragShadows: true,
     anisotropy: 4,
     floorDetail: 400,
-    surroundings: 'high',
+    surroundings: 'medium', // full geometry, the aerial photo at 1024 px
   },
   high: {
     name: 'High',
-    summary: 'For desktops and recent phones: full resolution and the sharpest shadows.',
+    summary: 'For computers: full resolution, smooth edges and real shadows.',
+    shadows: true,
     pixelRatio: 2,
     movingRatio: 1.5,
     antialias: true,
     sunShadow: 2048,
     lampShadow: 512,
-    softShadows: true,
-    probe: 128,
     whiteBalancePass: true,
     dragShadows: true,
     anisotropy: 16,
@@ -68,7 +72,7 @@ const lower = (a, b) => (ORDER.indexOf(a) <= ORDER.indexOf(b) ? a : b);
 // (other browsers round or cap it), so unknown devices start optimistic and step down if slow.
 export function deviceLevel() {
   const mq = (q) => typeof matchMedia === 'function' && matchMedia(q).matches;
-  const coarse = mq('(pointer: coarse)') && !mq('(any-pointer: fine)');
+  const coarse = mq('(pointer: coarse)'); // the main pointer is a finger
   const shortSide = Math.min(screen.width, screen.height);
   const memory = navigator.deviceMemory, cores = navigator.hardwareConcurrency;
   const modest = memory != null && (memory <= 4 || (cores != null && cores <= 4));
@@ -95,6 +99,34 @@ function write(state) {
   }
 }
 
+// Shadow maps are never used where they crash the graphics driver, at any level:
+// - Imagination PowerVR GPUs. On a Pixel 10 Pro (PowerVR DXT, Chrome 155) Chrome's GPU process
+//   dies within seconds of the first frame with shadows (in the driver's texture state, on a
+//   draw); three.js's own shadow example does the same there. docs/performance-review.md.
+// - Any device where the WebGL context was lost while shadow maps were on (remembered, so the
+//   next visit doesn't crash again): main.js calls blockShadows().
+// Returns why they're off ('' if they're allowed).
+const NO_SHADOWS = 'living-room.no-shadows';
+export function shadowsBlocked(gl) {
+  try {
+    const remembered = localStorage.getItem(NO_SHADOWS);
+    if (remembered) return remembered;
+  } catch {
+    // no storage: nothing remembered
+  }
+  const info = gl.getExtension('WEBGL_debug_renderer_info');
+  const gpu = `${gl.getParameter(info ? info.UNMASKED_RENDERER_WEBGL : gl.RENDERER)} ${info ? gl.getParameter(info.UNMASKED_VENDOR_WEBGL) : ''}`;
+  if (/PowerVR|Imagination/i.test(gpu)) return 'this graphics chip’s driver crashes with them';
+  return '';
+}
+export function blockShadows(reason) {
+  try {
+    localStorage.setItem(NO_SHADOWS, reason);
+  } catch {
+    // not remembered; the session still switches them off
+  }
+}
+
 // Frames slower than this (ms, the median of a run while the view moves) make Auto step down.
 const SLOW = 45;
 const RUN = 24; // frames per verdict
@@ -111,7 +143,8 @@ export function createQuality() {
   const listeners = new Set();
   let samples = [], armed = false, reason = '';
 
-  const resolve = () => (choice === 'auto' ? (stepped ? lower(stepped, detected.level) : detected.level) : choice);
+  const autoLevel = () => (stepped ? lower(stepped, detected.level) : detected.level);
+  const resolve = () => (choice === 'auto' ? autoLevel() : choice);
   let level = resolve();
   const startedWith = LEVELS[level].antialias;
 
@@ -132,9 +165,14 @@ export function createQuality() {
     get device() {
       return detected;
     },
-    // Why Auto is where it is, for the panel ("Balanced for this phone").
+    // What Auto picks and why, for the panel ("Balanced for this phone"), whatever is chosen now.
     get reason() {
-      return reason || `${LEVELS[level].name} for this ${detected.device}`;
+      const a = autoLevel();
+      if (a === detected.level) return `${LEVELS[a].name} for this ${detected.device}`;
+      return reason || `${LEVELS[a].name}: frames were slow on this ${detected.device}`;
+    },
+    get autoLevel() {
+      return autoLevel();
     },
     // Antialiasing is fixed when the page loads; this says whether the current level wants
     // something else (the panel then offers a reload).

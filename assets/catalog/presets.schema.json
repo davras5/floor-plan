@@ -98,7 +98,7 @@
         "y": {
           "type": "number",
           "minimum": 0,
-          "description": "Stands on something this high (the windowsill), instead of the floor."
+          "description": "Stands on something this high (the windowsill), instead of the floor; for a picture on a wall, the height of its frame's bottom edge."
         }
       },
       "allOf": [

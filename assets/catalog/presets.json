@@ -84,6 +84,24 @@
       "optional": true,
       "movable": false,
       "place": {"x": 2.1, "z": -0.085, "y": 0.84, "rotation": 0}
+    },
+    {
+      "id": "sofa-picture",
+      "label": "Sofa picture",
+      "product": "beyeler-hodler-grammont-60x80",
+      "alternatives": ["beyeler-hodler-grammont-60x80", "beyeler-hodler-mont-blanc-50x70"],
+      "optional": true,
+      "movable": false,
+      "place": {"left": 0.002, "z": 1.3, "y": 1.05, "rotation": 90}
+    },
+    {
+      "id": "table-picture",
+      "label": "Table picture",
+      "product": "beyeler-hodler-mont-blanc-50x70",
+      "alternatives": ["beyeler-hodler-mont-blanc-50x70", "beyeler-hodler-grammont-60x80"],
+      "optional": true,
+      "movable": false,
+      "place": {"x": 1.25, "door": 0.002, "y": 1.22, "rotation": 180}
     }
   ],
   "presets": [
@@ -113,7 +131,9 @@
         "chair-4": {"place": {"left": 1.477, "door": 0.328, "rotation": 270}},
         "sill-haworthia": {"present": true},
         "sill-rubber-plant": {"present": true},
-        "sill-snake-plant": {"present": true}
+        "sill-snake-plant": {"present": true},
+        "sofa-picture": {"product": "beyeler-hodler-grammont-60x80", "present": true, "place": {"left": 0.002, "z": 1.3, "y": 1.05, "rotation": 90}},
+        "table-picture": {"product": "beyeler-hodler-mont-blanc-50x70", "present": true}
       }
     },
     {
@@ -142,7 +162,9 @@
         "chair-4": {"place": {"left": 1.477, "door": 0.328, "rotation": 270}},
         "sill-haworthia": {"present": true},
         "sill-rubber-plant": {"present": true},
-        "sill-snake-plant": {"present": true}
+        "sill-snake-plant": {"present": true},
+        "sofa-picture": {"product": "beyeler-hodler-grammont-60x80", "present": true, "place": {"left": 0.002, "z": 1.3, "y": 1.05, "rotation": 90}},
+        "table-picture": {"product": "beyeler-hodler-mont-blanc-50x70", "present": true}
       }
     },
     {
@@ -171,7 +193,9 @@
         "chair-4": {"place": {"left": 1.477, "door": 0.328, "rotation": 270}},
         "sill-haworthia": {"present": true},
         "sill-rubber-plant": {"present": true},
-        "sill-snake-plant": {"present": true}
+        "sill-snake-plant": {"present": true},
+        "sofa-picture": {"product": "beyeler-hodler-grammont-60x80", "present": true, "place": {"left": 0.002, "z": 1.0, "y": 1.05, "rotation": 90}},
+        "table-picture": {"product": "beyeler-hodler-mont-blanc-50x70", "present": true}
       }
     },
     {
@@ -200,7 +224,9 @@
         "chair-4": {"place": {"left": 1.477, "door": 0.328, "rotation": 270}},
         "sill-haworthia": {"present": true},
         "sill-rubber-plant": {"present": true},
-        "sill-snake-plant": {"present": true}
+        "sill-snake-plant": {"present": true},
+        "sofa-picture": {"product": "beyeler-hodler-grammont-60x80", "present": true, "place": {"left": 0.002, "z": 1.23, "y": 1.05, "rotation": 90}},
+        "table-picture": {"product": "beyeler-hodler-mont-blanc-50x70", "present": true}
       }
     },
     {
@@ -229,7 +255,9 @@
         "chair-4": {"place": {"left": 1.477, "door": 0.328, "rotation": 270}},
         "sill-haworthia": {"present": true},
         "sill-rubber-plant": {"present": true},
-        "sill-snake-plant": {"present": true}
+        "sill-snake-plant": {"present": true},
+        "sofa-picture": {"product": "beyeler-hodler-grammont-60x80", "present": true, "place": {"left": 0.002, "z": 1.23, "y": 1.05, "rotation": 90}},
+        "table-picture": {"product": "beyeler-hodler-mont-blanc-50x70", "present": true}
       }
     }
   ]

@@ -1,0 +1,67 @@
+{
+  "product": "Ferdinand Hodler, Le Mont Blanc aux nuages roses, 1918: art print, 50 × 70 cm, framed",
+  "item": "28845",
+  "currency": "CHF",
+  "fetched": "2026-10-26",
+  "market": "Swiss shops, prices in CHF incl. 8.1% VAT, without delivery",
+  "sources": [
+    "https://shop.fondationbeyeler.ch/en/artikel/ferdinand-hodler-le-mont-blanc-aux-nuages-roses-1918-28845 (the print: art. 28845, CHF 75, sheet 50 × 70 cm, giclée on uncoated 100% cotton paper 270 g/m², in stock; image 60 × 42 cm on the sheet, measured on the shop's photo. Delivered in Switzerland and Liechtenstein, free from CHF 250: /en/versandkosten.html)",
+    "https://shop.fondationbeyeler.ch/en/artikel/frame-50-x-70-23726 (Frame 50 x 70, art. 23726: white wood, glass, CHF 59; on-site pick-up only)",
+    "https://www.connox.ch/kategorien/accessoires/dekoration/bilderrahmen/moebe-frame-bilderrahmen.html (Moebe Frame 50 × 70 cm: Eiche CHF 91.90 (list price 96), 1.2 cm deep, ?itm=272363; schwarz, powder-coated aluminium, CHF 77.90 (list price 93), 0.8 cm deep, ?itm=272361. Two acrylic panes, no back board. Swiss Post CHF 9.90, free from CHF 150. In 50 × 70 Moebe sells only these two)"
+  ],
+  "note": "The painting (1918, oil on canvas, 60.2 × 85 cm) is in the Rudolf Staechelin Collection, Basel. The prints have a white margin and no passe-partout; none of these frames comes with one. The Beyeler frame's profile isn't published: modelled 2 cm wide and 2.5 cm deep; the Moebe 1.1 cm wide and 1.2 cm deep.",
+  "groups": [
+    {
+      "id": "print",
+      "label": "Print",
+      "parts": [],
+      "price": "total",
+      "default": "giclee",
+      "options": [
+        {
+          "id": "giclee",
+          "name": "Giclée on cotton paper, 50 × 70 cm",
+          "color": "#b0a796",
+          "price": 75,
+          "note": "Print: Fondation Beyeler Shop, CHF 75, delivered in Switzerland"
+        }
+      ]
+    },
+    {
+      "id": "frame",
+      "label": "Frame",
+      "parts": ["frame"],
+      "price": "add",
+      "default": "white",
+      "options": [
+        {
+          "id": "white",
+          "name": "White wood frame",
+          "color": "#f1f0ec",
+          "price": 59,
+          "model": "standard",
+          "material": {"type": "paint", "color": "#f1f0ec", "roughness": 0.6},
+          "note": "Frame: Fondation Beyeler Frame 50 × 70, white wood with glass, CHF 59, collected at the museum (Riehen)"
+        },
+        {
+          "id": "oak",
+          "name": "Oak frame",
+          "color": "#d2bda1",
+          "price": 91.9,
+          "model": "moebe",
+          "material": {"type": "wood", "map": "assets/furniture/muuto-workshop-table-130x65/oak.jpg", "tile": [0.6, 0.6], "roughness": 0.66},
+          "note": "Frame: Moebe Frame 50 × 70, oak with acrylic, CHF 91.90 at connox.ch, delivered"
+        },
+        {
+          "id": "black",
+          "name": "Black frame",
+          "color": "#222222",
+          "price": 77.9,
+          "model": "moebe",
+          "material": {"type": "paint", "color": "#222222", "roughness": 0.45},
+          "note": "Frame: Moebe Frame 50 × 70, black aluminium with acrylic, CHF 77.90 at connox.ch, delivered"
+        }
+      ]
+    }
+  ]
+}

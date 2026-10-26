@@ -18,15 +18,19 @@ import { noAreaLights } from '../lighting/shader-hooks.js';
 // Height grid cells per terrain tile (2 m each), and tiles per side for buildings and trees.
 const TERRAIN_TILE = 48;
 const TILES = 4;
-// detail ('high' / 'low', from the rendering quality): the terrain's grid step (×2 m) up to each
-// distance from the flat, and the tree crowns' icosphere detail near the flat and further out.
+// detail ('high' / 'medium' / 'low', from the rendering quality): the terrain's grid step (×2 m)
+// up to each distance from the flat, and the tree crowns' icosphere detail near the flat and
+// further out.
+// photo: the largest size of the aerial photo on the GPU (the file is 2048 px; at 1024 it takes
+// 6 MB of GPU memory instead of 22).
 const DETAIL = {
-  high: { terrain: [[50, 1], [120, 2], [Infinity, 4]], crowns: [2, 1] },
-  low: { terrain: [[50, 2], [120, 4], [Infinity, 8]], crowns: [1, 0] },
+  high: { terrain: [[50, 1], [120, 2], [Infinity, 4]], crowns: [2, 1], photo: 4096 },
+  medium: { terrain: [[50, 1], [120, 2], [Infinity, 4]], crowns: [2, 1], photo: 1024 },
+  low: { terrain: [[50, 2], [120, 4], [Infinity, 8]], crowns: [1, 0], photo: 1024 },
 };
 const SKIRT = 3; // m
 
-// options: anisotropy (the aerial photo's filtering), detail ('high' or 'low': see setDetail),
+// options: anisotropy (the aerial photo's filtering), detail ('high', 'medium', 'low': DETAIL),
 // onRequested() once all its downloads have started.
 export async function loadSurroundings(R, { anisotropy: aniso = 1, detail = 'high', onRequested = () => {} } = {}, base = 'assets/surroundings/') {
   const get = async (file) => {
@@ -49,6 +53,7 @@ export async function loadSurroundings(R, { anisotropy: aniso = 1, detail = 'hig
   photo.colorSpace = THREE.SRGBColorSpace;
   photo.anisotropy = aniso;
   const heights = new Float32Array(terrain);
+  const photos = new Map([[photo.image.width, photo]]); // px → texture
 
   // Outdoors, the window and balcony-door area lights only cost time: they face into the room.
   const materials = {
@@ -99,6 +104,22 @@ export async function loadSurroundings(R, { anisotropy: aniso = 1, detail = 'hig
         g.remove(o);
       }
     }
+    // The aerial photo at the size the level allows (a smaller copy is drawn from the original).
+    const size = Math.min(d.photo, photo.image.width);
+    if (!photos.has(size)) {
+      const canvas = Object.assign(document.createElement('canvas'), { width: size, height: size });
+      canvas.getContext('2d').drawImage(photo.image, 0, 0, size, size);
+      const t = new THREE.CanvasTexture(canvas);
+      t.colorSpace = THREE.SRGBColorSpace;
+      t.anisotropy = photo.anisotropy;
+      photos.set(size, t);
+    }
+    const map = photos.get(size);
+    if (materials.ground.map !== map) {
+      materials.ground.map?.dispose(); // frees the GPU copy; the image stays, to upload again
+      map.anisotropy = materials.ground.map?.anisotropy ?? map.anisotropy;
+      materials.ground.map = map;
+    }
     terrainGroup.add(...terrainTiles(site, heights, materials.ground, d.terrain));
     treeGroup.add(...treeTiles(site, materials, d.crowns));
     group.updateMatrixWorld(true);
@@ -127,7 +148,7 @@ export async function loadSurroundings(R, { anisotropy: aniso = 1, detail = 'hig
       visible = on;
       applyVisible();
     },
-    // How finely the terrain and trees are drawn ('high' or 'low'), from the rendering quality.
+    // How finely the terrain and trees are drawn, and the aerial photo's size (DETAIL).
     setDetail,
     // Shadow casting on or off (it only matters for the sun). Changes no shaders.
     setCasting(on) {

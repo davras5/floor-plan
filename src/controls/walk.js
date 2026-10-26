@@ -111,6 +111,9 @@ export class WalkControls {
 
     window.addEventListener('keydown', (e) => {
       if (!this.enabled || e.metaKey || e.ctrlKey || e.altKey || !ALL_KEYS.includes(e.code)) return;
+      // Keys typed into a form control (the sun slider, the month, a field) are the control's.
+      // Buttons aren't: right after clicking Walk, its button has the focus.
+      if (e.target instanceof Element && e.target.closest('input, select, textarea, [role="slider"], [contenteditable]')) return;
       if (e.code.startsWith('Arrow') && !this.arrowsEnabled()) return;
       this.keys.add(e.code);
       if (!e.code.startsWith('Shift')) e.preventDefault();

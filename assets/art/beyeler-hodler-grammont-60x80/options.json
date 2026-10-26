@@ -1,0 +1,65 @@
+{
+  "product": "Ferdinand Hodler, Le Grammont après la pluie, 1917: art print, 60 × 80 cm, framed",
+  "item": "28844",
+  "currency": "CHF",
+  "fetched": "2026-10-26",
+  "market": "Swiss shops, prices in CHF incl. 8.1% VAT, without delivery",
+  "sources": [
+    "https://shop.fondationbeyeler.ch/en/artikel/ferdinand-hodler-le-grammont-apres-la-pluie-1917-28844 (the print: art. 28844, CHF 98, sheet 60 × 80 cm, giclée on uncoated 100% cotton paper 270 g/m², in stock; image 70 × 53 cm on the sheet, measured on the shop's photo. Delivered in Switzerland and Liechtenstein, free from CHF 250: /en/versandkosten.html)",
+    "https://shop.fondationbeyeler.ch/en/artikel/frame-60-x-80-24986 (Frame 60 x 80, art. 24986: white wood, glass, CHF 68; on-site pick-up only)",
+    "https://www.boesner.ch/quadro-eiche-glaswechselrahmen-25048 (boesner Quadro Eiche: solid natural oak, 2 mm float glass, insert paper, hardboard back; 60 × 80 cm CHF 88.60, A040057. Glass frames from 40 × 50 cm are posted only in tens; single ones are sold in boesner's shops)",
+    "https://www.boesner.ch/quadro-farbig-glaswechselrahmen-13903 (boesner Quadro farbig: lacquered pine, Schwarz or Weiss; 60 × 80 cm CHF 71.80, Schwarz A023505; same rule for posting)"
+  ],
+  "note": "The painting (1917, oil on canvas, 60.5 × 80 cm) is in the Rudolf Staechelin Collection, Basel. The prints have a white margin and no passe-partout; none of these frames comes with one. The frames' profiles aren't published: modelled 2 cm wide and 2.5 cm deep.",
+  "groups": [
+    {
+      "id": "print",
+      "label": "Print",
+      "parts": [],
+      "price": "total",
+      "default": "giclee",
+      "options": [
+        {
+          "id": "giclee",
+          "name": "Giclée on cotton paper, 60 × 80 cm",
+          "color": "#8d9ca2",
+          "price": 98,
+          "note": "Print: Fondation Beyeler Shop, CHF 98, delivered in Switzerland"
+        }
+      ]
+    },
+    {
+      "id": "frame",
+      "label": "Frame",
+      "parts": ["frame"],
+      "price": "add",
+      "default": "white",
+      "options": [
+        {
+          "id": "white",
+          "name": "White wood frame",
+          "color": "#f1f0ec",
+          "price": 68,
+          "material": {"type": "paint", "color": "#f1f0ec", "roughness": 0.6},
+          "note": "Frame: Fondation Beyeler Frame 60 × 80, white wood with glass, CHF 68, collected at the museum (Riehen)"
+        },
+        {
+          "id": "oak",
+          "name": "Oak frame",
+          "color": "#d2bda1",
+          "price": 88.6,
+          "material": {"type": "wood", "map": "assets/furniture/muuto-workshop-table-130x65/oak.jpg", "tile": [0.6, 0.6], "roughness": 0.66},
+          "note": "Frame: boesner Quadro Eiche 60 × 80, solid oak with glass, CHF 88.60, in boesner's shops"
+        },
+        {
+          "id": "black",
+          "name": "Black frame",
+          "color": "#222222",
+          "price": 71.8,
+          "material": {"type": "paint", "color": "#222222", "roughness": 0.5},
+          "note": "Frame: boesner Quadro Schwarz 60 × 80, lacquered pine with glass, CHF 71.80, in boesner's shops"
+        }
+      ]
+    }
+  ]
+}

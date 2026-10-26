@@ -13,11 +13,11 @@ export function buildAnnotations(R, layout) {
   group.name = 'annotations';
 
   // Dimension lines sit outside the room over the page background, so they follow the theme.
-  const lineMat = new THREE.LineBasicMaterial({ color: 0x3a4350 });
-  const faintMat = new THREE.LineBasicMaterial({ color: 0x3a4350, transparent: true, opacity: 0.4 });
+  const lineMat = new THREE.LineBasicMaterial({ toneMapped: false, color: 0x3a4350 });
+  const faintMat = new THREE.LineBasicMaterial({ toneMapped: false, color: 0x3a4350, transparent: true, opacity: 0.4 });
   // Swings sit on the oak floor, which looks the same in both themes: fixed dark ink.
-  const swingMat = new THREE.LineBasicMaterial({ color: 0x2a1d12, transparent: true, opacity: 0.6 });
-  const sashMat = new THREE.LineDashedMaterial({ color: 0x2a1d12, transparent: true, opacity: 0.5, dashSize: 0.05, gapSize: 0.035 });
+  const swingMat = new THREE.LineBasicMaterial({ toneMapped: false, color: 0x2a1d12, transparent: true, opacity: 0.6 });
+  const sashMat = new THREE.LineDashedMaterial({ toneMapped: false, color: 0x2a1d12, transparent: true, opacity: 0.5, dashSize: 0.05, gapSize: 0.035 });
 
   const v = (x, z, y = Y) => new THREE.Vector3(x, y, z);
 
@@ -131,10 +131,10 @@ export function buildAnnotations(R, layout) {
   // Measuring cross: lines from a picked floor point to all four walls.
   const measure = new THREE.Group();
   measure.visible = false;
-  const measureMat = new THREE.LineBasicMaterial({ color: 0x14100c, transparent: true, opacity: 0.75 });
+  const measureMat = new THREE.LineBasicMaterial({ toneMapped: false, color: 0x14100c, transparent: true, opacity: 0.75 });
   const measureLines = segments(new Array(8).fill(0).map(() => new THREE.Vector3()), measureMat, measure);
   measureLines.frustumCulled = false; // its bounds change on every move
-  const dot = new THREE.Mesh(new THREE.RingGeometry(0.035, 0.06, 32), new THREE.MeshBasicMaterial({ color: 0x14100c }));
+  const dot = new THREE.Mesh(new THREE.RingGeometry(0.035, 0.06, 32), new THREE.MeshBasicMaterial({ toneMapped: false, color: 0x14100c }));
   dot.rotation.x = -Math.PI / 2;
   measure.add(dot);
 

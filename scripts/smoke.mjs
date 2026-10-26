@@ -127,12 +127,31 @@ try {
   await send('Log.enable');
   await send('Page.enable');
   await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 800, deviceScaleFactor: 1, mobile: false });
+  // Counts the page's requestAnimationFrame calls (the render loop must sleep when idle).
+  await send('Page.addScriptToEvaluateOnNewDocument', { source: 'window.__rafCount = 0; { const r = window.requestAnimationFrame.bind(window); window.requestAnimationFrame = (cb) => (window.__rafCount++, r(cb)); }' });
   await send('Page.navigate', { url });
   await until('window.__roomReady', 'the room to render');
   await until('window.__furnitureReady', 'furniture to load');
   await until('window.__surroundingsReady', 'surroundings to load');
   await until('window.__lightCaptured >= 1', "the room's light to be captured");
   await run('localStorage.clear()');
+
+  // The render loop sleeps when nothing changes, and wakes for a change: after a few rounds of
+  // that, an idle page asks for (almost) no frames. (First, until the light captures are done.)
+  for (let last = -1, n; (n = await run('window.__lightCaptured')) !== last; last = n) await sleep(2500);
+  for (let i = 0; i < 3; i++) {
+    await run('roomApp.invalidate()');
+    await sleep(1500);
+  }
+  // (Up to three windows of 1.5 s, in case a late light capture wakes it in one; a loop that
+  // never sleeps fails all three.)
+  let idleFrames = Infinity;
+  for (let attempt = 0; attempt < 3 && idleFrames > 6; attempt++) {
+    const raf0 = await run('window.__rafCount');
+    await sleep(1500);
+    idleFrames = (await run('window.__rafCount')) - raf0;
+  }
+  if (idleFrames > 6) problems.push(`render loop: ${idleFrames} frames requested in 1.5 s with nothing to draw`);
 
   const steps = [
     ['orbit', "roomApp.setMode('orbit')"],
@@ -199,6 +218,22 @@ try {
   await run("document.getElementById('settings-q-auto').click()");
   await key('Escape');
   await run('roomApp.quality.set("high")');
+
+  // Diagnostics: a lost WebGL context shows the panel; when it's restored the panel goes and the
+  // room is drawn again. (The browser's own context-lost messages are expected here.)
+  const problemsBefore = problems.length;
+  const lost = await run("(() => { const x = roomApp.renderer.getContext().getExtension('WEBGL_lose_context'); if (!x) return false; window.__lose = x; x.loseContext(); return true; })()");
+  if (lost) {
+    await sleep(1000);
+    if (!(await run("!document.querySelector('.diag-panel').hidden"))) problems.push('diagnostics: no panel after the WebGL context was lost');
+    if (!/GPU: .+\n.*Limits: texture \d+/.test(await run('roomApp.diagnostics.details()'))) problems.push('diagnostics: the details lack the GPU and its limits');
+    await run('window.__lose.restoreContext()');
+    await sleep(4000);
+    await shot('context-restored');
+    if (await run("!document.querySelector('.diag-panel').hidden")) problems.push('diagnostics: the panel stayed after the context came back');
+    if (await run('roomApp.renderer.getContext().isContextLost()')) problems.push('diagnostics: the context did not come back');
+  }
+  problems.splice(problemsBefore, problems.length - problemsBefore, ...problems.slice(problemsBefore).filter((p) => !/context (was )?lost|CONTEXT_LOST/i.test(p)));
 
   // Phone layout.
   await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true });

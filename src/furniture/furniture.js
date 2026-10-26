@@ -104,6 +104,7 @@ export class Furniture {
       const pivot = new THREE.Group();
       pivot.name = entry.id;
       this.group.add(pivot);
+      try {
       const item = {
         id: entry.id, key, spec: CATALOG[key], pivot, home: entry, options, choices: normalise(options, kept.choices),
         present: kept.present ?? entry.present ?? true, matching: kept.match ?? !!entry.match,
@@ -112,14 +113,27 @@ export class Furniture {
       await this.loadInto(item, key, variantOf(options, item.choices));
       pivot.visible = item.present;
       const at = entry.movable === false ? null : saved[entry.id];
-      if (at) this.place(item, at.x, at.z, at.rotation);
+      if (at) this.place(item, at.x, at.z, at.rotation, { snap: false });
       else this.placeHome(item);
       await this.paintAll(item);
       return item;
+      } catch (err) {
+        this.group.remove(pivot);
+        console.warn(`furniture: ${entry.id} couldn't load, so it's left out:`, err);
+        return null;
+      }
     }));
     this.markStarted();
-    const loaded = await loading;
-    this.items.push(...loaded);
+    const loaded = (await loading).filter(Boolean);
+    // A piece placed by one that's missing has nowhere to go: leave it out too (hosts come first).
+    const have = new Set();
+    for (const item of loaded) {
+      const by = item.home.attach?.id ?? item.home.around?.id;
+      if (by && !have.has(by)) item.pivot.removeFromParent();
+      else have.add(item.id);
+    }
+    this.items.push(...loaded.filter((i) => have.has(i.id)));
+    if (!this.items.length) throw new Error('no furniture could load');
     // Pieces placed by another (the pouf by the sofa, which makes room for it; chairs around the
     // table) go there once all are known. LAYOUT lists each piece after the one it depends on.
     for (const item of this.items) if (!saved[item.id]) this.placeHome(item);
@@ -295,7 +309,8 @@ export class Furniture {
   anchorPopup(item) {
     if (item.kind === 'fixture') item.updateBox();
     const b = item.box;
-    this.popup.object.position.set((b.min.x + b.max.x) / 2, b.max.y, (b.min.z + b.max.z) / 2);
+    // Below Plan's cut (its camera's near plane), or the card would be clipped away with the top.
+    this.popup.object.position.set((b.min.x + b.max.x) / 2, Math.min(b.max.y, this.popupMaxY ?? Infinity), (b.min.z + b.max.z) / 2);
   }
 
   // A lighter outline under the mouse while editing. Doesn't touch the shadows, so main.js
@@ -316,7 +331,8 @@ export class Furniture {
   }
 
   outlineState(item) {
-    const state = item === this.selected ? 'selected' : item === this.hovered && this.editing ? 'hover' : null;
+    let state = item === this.selected ? 'selected' : item === this.hovered && this.editing ? 'hover' : null;
+    if (state && this.hiddenNow?.(item)) state = null; // a fitting in a wall that's cut away now
     if ((!state && !item.outline) || item.noOutline) return;
     item.outline ??= buildOutline(item.meshes);
     for (const { mask, rim, line } of item.outline) {
@@ -333,7 +349,7 @@ export class Furniture {
   pick(raycaster) {
     let best = null;
     for (const item of this.items) {
-      if (!item.present || !raycaster.ray.intersectsBox(item.box)) continue;
+      if (!item.present || !item.pivot.visible || !raycaster.ray.intersectsBox(item.box)) continue;
       const hit = raycaster.intersectObject(item.pivot, true)[0];
       if (hit && hit.distance < (best?.distance ?? Infinity)) best = { item, point: hit.point, distance: hit.distance };
     }
@@ -534,7 +550,12 @@ export class Furniture {
   // A preset sets, for each piece it names (by LAYOUT id, or by product for all copies), the
   // product, whether it's in the room, and its finish. Unnamed pieces keep theirs.
   presetFor(preset, item) {
-    return preset.pieces[item.id] ?? preset.pieces[item.home.item];
+    // A piece can be named twice: by its product (the four chairs' finish) and by its own id (each
+    // chair's place). Both apply; where both set something, the piece's own entry wins.
+    const all = preset.pieces[item.home.item], own = preset.pieces[item.id];
+    if (!all || !own) return own ?? all;
+    const choices = all.choices || own.choices ? { ...all.choices, ...own.choices } : undefined;
+    return { ...all, ...own, ...(choices && { choices }) };
   }
 
   async applyPreset(id) {
@@ -565,7 +586,8 @@ export class Furniture {
   async paletteOf(pieces) {
     const colors = await Promise.all(PALETTE.map(async ([piece, groupId]) => {
       const home = LAYOUT.find((h) => h.id === piece || h.item === piece);
-      const p = pieces[home.id] ?? pieces[home.item] ?? {};
+      const all = pieces[home.item] ?? {}, own = pieces[home.id] ?? {};
+      const p = { ...all, ...own, choices: { ...all.choices, ...own.choices } };
       const group = (await loadOptions(CATALOG[p.item ?? home.item].options))?.groups.find((g) => g.id === groupId);
       const option = group?.byId.get(p.choices?.[groupId]) ?? group?.byId.get(group.default);
       return option && { color: option.color, name: option.name };

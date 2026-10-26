@@ -72,6 +72,17 @@ export const ROOM = {
   },
 
   baseboard: { height: 0.06, thickness: 0.012 },
-  balcony: { depth: 1.60, drop: 0.08 },
+  // Balcony, measured from photos taken on it (camera poses solved from the window panes, ±10 cm):
+  // a concrete slab and solid parapet from the party wall on the left, where a dark metal screen
+  // parts it from the neighbour's, to a short side parapet on the right. The balcony above is its roof.
+  balcony: {
+    depth: 1.65, // facade → outside of the parapet (1.50 m clear inside it)
+    drop: 0.12, // room floor → balcony floor (the step down at the door)
+    to: 3.93, // left corner → outside of the side parapet at the right-hand end
+    parapet: 0.80, // balcony floor → top of the parapet's coping
+    wall: 0.15, // parapet thickness
+    screen: 2.20, // balcony floor → top of the screen on the party-wall line
+    soffit: 2.55, // room floor → underside of the balcony above
+  },
   hallway: { width: 1.90, depth: 1.60 }, // only shown in Walk view, through the door
 };

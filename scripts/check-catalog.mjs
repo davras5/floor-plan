@@ -2,7 +2,8 @@
 // every product's options file, so a preset can only ever choose something the maker sells:
 //   - products: required fields, model files present, parts and variants that exist
 //   - options: each group's default exists, its parts exist, `model` options name a variant
-//   - pieces: products and alternatives exist, one placement rule, references to earlier pieces
+//   - pieces: products and alternatives exist, one placement rule, references to earlier pieces;
+//     art hangs on a wall (movable: false, a height, its back on the wall it turns from)
 //   - presets: unique ids, pieces and products that exist, every choice an option of that
 //     product that is sold (not `offered: false`), placements well formed
 // Run by `npm test`; prints every problem and exits 1 if there are any.
@@ -13,6 +14,7 @@ const root = resolve(import.meta.dirname, '..');
 const read = (path) => JSON.parse(readFileSync(resolve(root, path), 'utf8'));
 const problems = [];
 const fail = (where, what) => problems.push(`${where}: ${what}`);
+const DECOR = new Set(['plant', 'art']); // not furniture: not among a preset's makers
 
 const { products, partSets = {} } = read('assets/catalog/products.json');
 const { pieces, presets, palette = [], default: defaultPreset } = read('assets/catalog/presets.json');
@@ -92,6 +94,11 @@ for (const [i, piece] of pieces.entries()) {
   if (piece.place) checkPlace(at, piece.place);
   for (const k of ['attach', 'around']) if (piece[k] && !pieceIds.has(piece[k].to)) fail(at, `${k}.to ${piece[k].to} is not an earlier piece`);
   if (piece.match && !pieceIds.has(piece.match)) fail(at, `match ${piece.match} is not an earlier piece`);
+  if ([piece.product, ...(piece.alternatives ?? [])].some((p) => products[p]?.category === 'art')) {
+    if (piece.movable !== false) fail(at, 'art hangs on a wall: it needs movable: false');
+    if (piece.place) checkHung(at, piece.place);
+    else fail(at, 'art needs a place on a wall');
+  }
   pieceIds.add(piece.id);
 }
 function checkPlace(at, place) {
@@ -99,6 +106,13 @@ function checkPlace(at, place) {
   if (across.length !== 1) fail(at, 'place needs one of left / right / x');
   if (along.length !== 1) fail(at, 'place needs one of window / door / z');
   if (![0, 90, 180, 270].includes(place.rotation)) fail(at, `rotation ${place.rotation} is not 0, 90, 180 or 270`);
+}
+// A picture: a height (its bottom edge), its back to the wall it faces away from (within 5 cm, so
+// it goes with that wall when the 3D view cuts it away), facing into the room.
+function checkHung(at, place) {
+  if (place.y == null) fail(at, 'a picture needs a height y (its bottom edge)');
+  const wall = { 0: 'window', 90: 'left', 180: 'door', 270: 'right' }[place.rotation];
+  if (!(place[wall] >= 0 && place[wall] <= 0.05)) fail(at, `turned ${place.rotation}°, a picture hangs on the ${wall} wall: give ${wall} (0–0.05)`);
 }
 
 // ---- Presets ----
@@ -108,12 +122,13 @@ for (const preset of presets) {
   const at = `presets.${preset.id}`;
   if (presetIds.has(preset.id) || preset.id === 'none') fail(at, 'duplicate or reserved id');
   presetIds.add(preset.id);
-  // Its maker label lists the makers of the furniture it names (plants aside), no more, no fewer.
+  // Its maker label lists the makers of the furniture it names (plants and art aside: decoration,
+  // whose shop isn't who the look is by), no more, no fewer.
   const makers = new Set();
   for (const [key, entry] of Object.entries(preset.pieces)) {
     const piece = pieces.find((p) => p.id === key) ?? pieces.find((p) => p.product === key);
     const product = products[entry.product ?? piece?.product];
-    if (product && product.category !== 'plant' && entry.present !== false) makers.add(product.maker);
+    if (product && !DECOR.has(product.category) && entry.present !== false) makers.add(product.maker);
   }
   const listed = (preset.maker ?? '').split(' · ').filter(Boolean);
   if (listed.sort().join() !== [...makers].sort().join()) fail(at, `maker "${preset.maker ?? ''}" should be "${[...makers].join(' · ')}"`);
@@ -130,6 +145,7 @@ for (const preset of presets) {
       else if (entry.product && !(piece.alternatives ?? [piece.product]).includes(product)) fail(`${at}.${key}`, `${product} is not an alternative for ${piece.id}`);
       if (entry.present === false && !piece.optional) fail(`${at}.${key}`, `${piece.id} isn't optional, so it can't be left out`);
       if (entry.place) checkPlace(`${at}.${key}`, entry.place);
+      if (entry.place && products[product]?.category === 'art') checkHung(`${at}.${key}`, entry.place);
       const o = options[product];
       for (const [group, choice] of Object.entries(entry.choices ?? {})) {
         const g = o?.groups.find((x) => x.id === group);

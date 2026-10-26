@@ -23,6 +23,9 @@ export function buildCurtains(R) {
   const voile = new THREE.MeshStandardMaterial({
     color: 0xf6f5f1, roughness: 0.95, side: THREE.DoubleSide,
     transparent: true, opacity: 0.78, depthWrite: false, dithering: true,
+    // One pass for both sides: three would otherwise draw (and compile) a transparent two-sided
+    // material twice, back faces then front. Evenly white and sheer, the voile looks the same.
+    forceSinglePass: true,
   });
   // It receives the sun's shadow (or it would be sunlit through the wall), offset by 4 cm so
   // the folds (3.5 cm deep) don't shadow each other as a dotted pattern; the wall that should

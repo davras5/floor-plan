@@ -39,8 +39,55 @@ Panning can't lose the room: the camera's focus point stays in or near it.
   - the **curtains**: *Close* draws both panels across the rail; *Open* gathers them again.
 - **Presets** (top right): whole-room looks, one tap each; **None** shows the empty room. See
   Furniture below.
-- **Measurements** (off at first) shows wall dimensions, door and window swings, and the ceiling-light position.
+- **Settings** (the gear in the toolbar) opens a small panel:
+  - **Show measurements** (off at first): wall dimensions, door and window swings, and the
+    ceiling-light position.
+  - **Rendering quality**: how much the app draws. See [Rendering quality](#rendering-quality).
 - Hover (or tap) the floor in 3D or Plan to read the distance to all four walls.
+
+### Rendering quality
+
+**Auto**, the default, picks a level for the device; or choose **Battery saver**, **Balanced** or
+**High**. The choice is remembered in the browser (`src/quality.js`).
+
+| | Battery saver | Balanced | High |
+| --- | --- | --- | --- |
+| Resolution, device pixels per CSS pixel (never more than the screen has) | 1 | 1.5 | 2 |
+| … while the view moves (orbit, pan, walk, a drag); full again once it's still | 0.75 | 1 | 1.5 |
+| Edge smoothing (antialiasing) | off | off | on |
+| Shadows | simple | simple | real (shadow maps) |
+| Sun shadow map | — | — | 2048 px |
+| Lamp shadow map, per cube face | — | — | 512 px |
+| Second light capture for the white balance after a big change of light | no | yes | yes |
+| A dragged piece's shadow | follows when it's put down | follows it | follows it |
+| Texture filtering (anisotropy) | 2× | 4× | 16× |
+| Parquet texture | 280 px/m | 400 px/m | 400 px/m |
+| Neighbourhood (Walk, shadows, light capture) | coarser terrain and trees, 1024 px aerial photo | full, 1024 px photo | full, 2048 px photo |
+| GPU memory on a phone (390 × 844, pixel ratio 3), by day / at night, measured with 1024 px shadow maps on every level | about 71 / 76 MB | about 83 / 87 MB | about 162 / 179 MB |
+
+- **Simple shadows** (Battery saver and Balanced, so phones and tablets): no shadow maps. The sun
+  comes into the room only where its ray leaves through a pane of the window or the balcony door,
+  past the wall opening, the balcony above, its parapet and the screen to the neighbour's
+  (`src/lighting/window-sun.js`); the neighbours' buildings and trees dim each pane by a few rays
+  toward the sun. Furniture casts no sun shadows and stands on soft contact shadows instead
+  (`src/scene/contact-shadows.js`). The lamp lights the room without shadows.
+- **Shadow maps are never used** on Imagination PowerVR graphics (Pixel 10: they crash Chrome's
+  graphics process within seconds; [performance-review.md](performance-review.md), round 3), nor on
+  a device where the 3D view once stopped with them on. High then draws simple shadows too, and
+  the settings panel says why.
+- **Auto** starts with Balanced on phones (Battery saver where the browser reports at most 4 GB of
+  memory or 4 cores), Balanced on tablets and High on computers (Balanced with at most 4 GB or 4
+  cores). Once the room has loaded it watches the frames while the view moves, and steps down a
+  level if they come slower than about 22 a second (the median of 24). A step down is remembered
+  for the next visit; choosing Auto again starts over.
+- A new level applies at once. Edge smoothing is the exception: a WebGL page can only choose it
+  when it starts, so the panel offers **Reload now**, which keeps the view and the time of day.
+- Measured costs of each setting are in [performance-review.md](performance-review.md).
+- **When something goes wrong** (the phone's graphics memory runs out and the 3D view stops, a
+  shader doesn't compile on the graphics chip, an error), a small panel at the top says so and
+  offers what helps: Reload, or Battery saver and reload. **Copy details** gives the graphics chip
+  and its limits, the screen, the quality level, the browser and the errors, for a bug report
+  (`src/ui/diagnostics.js`).
 
 ## Light and surroundings
 
@@ -63,7 +110,12 @@ Panning can't lose the room: the camera's focus point stays in or near it.
 
 - `npm test` checks the catalog (`scripts/check-catalog.mjs`), then opens the app in headless Chrome
   or Edge, goes through every view, Edit, the lamp, the doors, window and curtains and the sun, checks that furniture only moves in Edit and that phones don't scroll
-  sideways, and fails on any console error. Screenshots land in `test-output/`.
+  sideways, and fails on any console error. It also opens the settings panel: dialog semantics,
+  Esc and focus, Show measurements, a quality level applied live, arrow keys between levels, and
+  on phones (360 and 390 px) that the panel fits, its targets are 44 px and the toolbar stays one
+  row. Screenshots land in `test-output/`.
+- `npm start` (`scripts/serve.mjs`) serves text files compressed (brotli or gzip, like a real host;
+  `COMPRESS=0` to turn it off) with ETags, so reloads only fetch what changed.
 - `npm run build:artifact` writes `dist/index.html` plus `dist/files.json`, the list of every file
   the page loads, for publishing it as a claude.ai artifact.
 
@@ -73,6 +125,15 @@ Every size lives in [src/config.js](../src/config.js). The current values were *
 photos** (each photo's camera calibrated from the room's straight lines, scaled by the 2.50 m
 ceiling): a few cm on the window wall, ±15 cm on the room's length. Measure the
 room and update that file; the model, the dimension lines and the info card all follow.
+
+The **balcony** (`balcony` in the same file) comes from a later set of photos taken on it and
+looking out at it (not in the repo): each camera's position was solved from the window panes, whose
+sizes the model knows, and the parapet, floor and screen were found along the cameras' rays, to
+about ±10 cm. It's a
+concrete slab 12 cm below the room's floor, 1.50 m deep inside a solid parapet 80 cm high (a dark
+capping along the front, a stone coping on the short side parapet at the right-hand end, 3.93 m
+from the left corner). A 2.2 m dark metal screen on the party-wall line parts it from the
+neighbour's balcony, and the balcony above, 2.55 m over the room's floor, is its roof (Walk only).
 
 The most useful numbers to measure first:
 
@@ -86,7 +147,8 @@ The most useful numbers to measure first:
 
 ```
 index.html                 page, styles, UI
-src/main.js                renderer, cameras, views, picking, light capture, wiring
+src/main.js                renderer, cameras, views, render loop, picking, light capture, wiring
+src/quality.js             rendering quality: the levels, Auto, remembering the choice
 src/config.js              room measurements
 src/util.js                small shared helpers (seeded random numbers, smoothing)
 src/scene/                 room.js (walls, openings, window, doors), textures.js (parquet),
@@ -100,7 +162,8 @@ src/furniture/             furniture.js (loads the catalog; finishes, placing, o
                            editor.js (Edit: select, drag, undo, edit panel, info card, presets)
 src/controls/walk.js       first-person walking
 src/ui/                    accessibility.js (keyboard 3D view, room in words, folding panels),
-                           loading.js (loading bar and status)
+                           loading.js (loading bar and status), settings.js (the gear's panel),
+                           diagnostics.js (the panel that reports problems)
 assets/catalog/            products.json, presets.json and their schemas (docs/catalog.md)
 assets/furniture/          web-ready models, finishes (options.json) and swatches
 assets/plants/             the plants (GLB) and where they come from (info.json)

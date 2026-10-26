@@ -270,3 +270,35 @@ export function tileTexture(widthM, depthM, ppm = 256) {
   tex.colorSpace = THREE.SRGBColorSpace;
   return tex;
 }
+
+/** Plain cast concrete, as on the balcony floor: soft blotches and fine grit, tiling every metre. */
+export function concreteTexture(ppm = 256) {
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = ppm;
+  const g = canvas.getContext('2d');
+  const rnd = mulberry32(11);
+  g.fillStyle = '#9a9893';
+  g.fillRect(0, 0, ppm, ppm);
+  // Blotches, drawn nine times over (shifted by the tile) so they wrap and the texture tiles.
+  for (let i = 0; i < 40; i++) {
+    const x = rnd() * ppm, y = rnd() * ppm, r = (0.05 + rnd() * 0.15) * ppm, l = 54 + rnd() * 10;
+    for (const dx of [-ppm, 0, ppm]) for (const dy of [-ppm, 0, ppm]) {
+      const grad = g.createRadialGradient(x + dx, y + dy, 0, x + dx, y + dy, r);
+      grad.addColorStop(0, hsl(40, 4, l, 0.18));
+      grad.addColorStop(1, hsl(40, 4, l, 0));
+      g.fillStyle = grad;
+      g.fillRect(x + dx - r, y + dy - r, 2 * r, 2 * r);
+    }
+  }
+  // Grit: single pixels a little darker or lighter.
+  const img = g.getImageData(0, 0, ppm, ppm);
+  for (let i = 0; i < img.data.length; i += 4) {
+    const d = (rnd() - 0.5) * 26;
+    for (let c = 0; c < 3; c++) img.data[i + c] = Math.max(0, Math.min(255, img.data[i + c] + d));
+  }
+  g.putImageData(img, 0, 0);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}

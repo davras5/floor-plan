@@ -24,7 +24,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 // and refilled in place, so nothing is allocated or recompiled per capture, and the scene's
 // environment texture never changes identity.
 
-const SIZE = 128; // per cube face; plenty for diffuse light and satin reflections (64 on Battery saver)
+const SIZE = 128; // per cube face; plenty for diffuse light and satin reflections
 
 function probe(scene, size, position) {
   const target = new THREE.WebGLCubeRenderTarget(size, { type: THREE.HalfFloatType, generateMipmaps: false });
@@ -38,9 +38,8 @@ function probe(scene, size, position) {
 // ceiling: { position, materials: () => [materials lit by the ceiling probe] }
 // Sets scene.environment right away: a neutral stand-in (three's RoomEnvironment) at the
 // capture's size, until the first capture fills the same texture with the room's own light.
-// size: px per cube face of the main probe (the ceiling's is half that). setSize() rebuilds both
-// at another size (the rendering quality); the environment texture is then a new one, so every
-// lit material recompiles once (its size is part of each shader).
+// size: px per cube face of the main probe (the ceiling's is half that). At 64 px a capture took
+// as long as at 128 (it isn't fill-bound) for 3.5 MB less, so every quality level keeps 128.
 export function createIndirect(renderer, scene, position, ceiling, size = SIZE) {
   let main, top, pmrem, pmremTop, env, ceilingEnv = null, n = 0;
   const canMeter = renderer.extensions.has('EXT_color_buffer_float') || renderer.extensions.has('EXT_color_buffer_half_float');
@@ -92,7 +91,7 @@ export function createIndirect(renderer, scene, position, ceiling, size = SIZE) 
     faces.forEach((pixels, face) => {
       for (let i = 0; i < pixels.length; i += 4 * stride) {
         const r = f(pixels[i]), g = f(pixels[i + 1]), b = f(pixels[i + 2]);
-        const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+        const lum = Math.max(0, 0.2126 * r + 0.7152 * g + 0.0722 * b); // dithering dips below 0 at night
         sum += Math.log(1e-4 + lum);
         samples.push(face, r, g, b, lum);
       }
@@ -112,12 +111,6 @@ export function createIndirect(renderer, scene, position, ceiling, size = SIZE) 
     // The main probe's cube target (main.js compiles shaders for it ahead of time).
     get target() {
       return main.target;
-    },
-    get size() {
-      return n;
-    },
-    setSize(faceSize) {
-      if (faceSize !== n) build(faceSize);
     },
     // prepare(): sets the scene up for the capture (walls uncut, overlays hidden, …) and
     // returns a function that restores it. Resolves to the meter reading ({ luminance, color }),

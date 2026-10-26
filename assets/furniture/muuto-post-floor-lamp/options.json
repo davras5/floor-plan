@@ -1,0 +1,44 @@
+{
+  "product": "Post Floor Lamp",
+  "item": "POSFLR{color}",
+  "fetched": "2026-10-26",
+  "market": "muuto.com, EU shop (configurator salesCode 102), prices in EUR incl. VAT",
+  "sources": [
+    "https://www.muuto.com/api/configurator/products/Post-Floor-Lamp?salesCode=102 (one master, POSFLR)",
+    "https://www.muuto.com/api/configurator/configure/POSFLR?product=Post-Floor-Lamp&salesCode=102 (one step, Color: 01 Black, 02 Brown Green, EUR 699 each; with &selection1=01 and =02 both complete: POSFLR01 and POSFLR02, EUR 699)",
+    "https://www.muuto.com/product/Post-Floor-Lamp--POSFLR/POSFLR01/ and /POSFLR02/ (item pages: colour, item number, EUR 699,00, packshot)",
+    "Post-Lamp-3D.zip Texture/Black.jpg (Black). Brown Green has no texture in the download (it predates the colour); it is matched to Muuto's packshot of POSFLR02, calibrated by the Black packshot against Black.jpg. Roughness from the packshots: a satin powder coat, matte silicone cords."
+  ],
+  "note": "Muuto sells two colours, every part of the lamp in the one colour; the opal diffusers are the same in both. Two lighting units come with the lamp; a third (Post Extra Lighting Unit, POSELU01) is sold separately and isn't an option here. The same two colours are sold in every Muuto market.",
+  "groups": [
+    {
+      "id": "color",
+      "label": "Colour",
+      "parts": ["base", "rod", "shade", "cord", "drops"],
+      "default": "01",
+      "price": "total",
+      "options": [
+        {
+          "id": "01", "name": "Black", "color": "#28292b", "price": 699,
+          "materials": {
+            "base": {"type": "paint", "color": "#28292b", "roughness": 0.6},
+            "rod": {"type": "paint", "color": "#28292b", "roughness": 0.6},
+            "shade": {"type": "paint", "color": "#28292b", "roughness": 0.6},
+            "cord": {"type": "plastic", "color": "#28292b", "roughness": 0.75},
+            "drops": {"type": "plastic", "color": "#28292b", "roughness": 0.5}
+          }
+        },
+        {
+          "id": "02", "name": "Brown Green", "color": "#4f4327", "price": 699,
+          "materials": {
+            "base": {"type": "paint", "color": "#4f4327", "roughness": 0.6},
+            "rod": {"type": "paint", "color": "#4f4327", "roughness": 0.6},
+            "shade": {"type": "paint", "color": "#4f4327", "roughness": 0.6},
+            "cord": {"type": "plastic", "color": "#4f4327", "roughness": 0.75},
+            "drops": {"type": "plastic", "color": "#4f4327", "roughness": 0.5}
+          }
+        }
+      ]
+    }
+  ]
+}

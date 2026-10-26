@@ -18,8 +18,11 @@ import { createLoading } from './ui/loading.js';
 import { loadSurroundings } from './scene/surroundings.js';
 import { sunPosition, zurichTime } from './lighting/sun.js';
 import { createIndirect, skyEnvironment } from './lighting/indirect.js';
-import { createQuality, LEVELS } from './quality.js';
+import { createQuality, shadowsBlocked, blockShadows } from './quality.js';
+import { createWindowSun } from './lighting/window-sun.js';
+import { createContactShadows } from './scene/contact-shadows.js';
 import { createSettings } from './ui/settings.js';
+import { createDiagnostics } from './ui/diagnostics.js';
 
 const W = ROOM.width, L = ROOM.length, H = ROOM.height, T = ROOM.wallThickness;
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -61,14 +64,35 @@ function ratios() {
 // stencil: the selection outline is drawn only outside the selected piece's silhouette.
 const renderer = new THREE.WebGLRenderer({ antialias: quality.antialias, alpha: true, stencil: true });
 renderer.setPixelRatio(ratios().still);
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = Q().softShadows ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
+// Shadow maps where the level has them and the graphics driver copes with them (quality.js);
+// otherwise the simple path: sun through the window by calculation, contact shadows.
+let shadowBlock = shadowsBlocked(renderer.getContext());
+const useShadows = () => Q().shadows && !shadowBlock;
+renderer.shadowMap.enabled = useShadows();
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.shadowMap.autoUpdate = false;
 renderer.toneMapping = THREE.NeutralToneMapping;
 renderer.localClippingEnabled = true;
 renderer.setClearColor(0x000000, 0); // the page background shows behind the model
 stage.appendChild(renderer.domElement);
 const canvas = renderer.domElement;
+// Problems a phone would otherwise hide (a lost context, a shader this GPU can't compile, an
+// uncaught error) show in a small panel with what to do and the details for a report.
+const diagnostics = createDiagnostics({
+  renderer, quality,
+  reload: () => reloadKeepingView(),
+  onRestored: () => {
+    applyShadows();
+    shadowsChanged(); // three has rebuilt its GPU resources: shadows and light again
+  },
+});
+// A context lost while shadow maps were on: no more shadow maps on this device (remembered), and
+// once the context is back the room carries on in the simple path.
+canvas.addEventListener('webglcontextlost', () => {
+  if (!renderer.shadowMap.enabled) return;
+  shadowBlock = 'the 3D view stopped once with them on';
+  blockShadows(shadowBlock);
+});
 
 const labels = new CSS2DRenderer();
 labels.domElement.className = 'labels';
@@ -87,6 +111,11 @@ const scene = new THREE.Scene();
 // ---- Room ----------------------------------------------------------------
 const room = buildRoom(ROOM, renderer, { anisotropy: Q().anisotropy, floorDetail: Q().floorDetail });
 scene.add(room.root);
+// The simple path's sunlight (lighting/window-sun.js) goes into every lit material indoors: the
+// room's now, before the 3D view's cut-away copies of the walls are made (they share the hooks);
+// the fittings and the furniture as they're added.
+const windowSun = createWindowSun(room, ROOM);
+windowSun.patchAll(room.root, [room.outdoors.group]);
 const notes = buildAnnotations(ROOM, room.layout);
 scene.add(notes.group, notes.measure);
 
@@ -97,7 +126,7 @@ const indirect = createIndirect(renderer, scene, PROBE(ROOM), {
   position: CEILING_PROBE(ROOM),
   // the ceiling, and its cut-away copy in Plan
   materials: () => [room.materials.ceiling, cutaway.clippedOf(room.materials.ceiling)].filter(Boolean),
-}, Q().probe);
+});
 scene.environmentIntensity = 0.4;
 
 // ---- Furnishings: the existing pendant, plus pieces from furniture.js -------
@@ -107,11 +136,21 @@ scene.add(pendant.group);
 // The curtains hang on the window wall, so the 3D view cuts them down with it.
 const curtains = buildCurtains(ROOM);
 room.walls.find((w) => w.name === 'north').group.add(curtains.group);
+windowSun.patchAll(pendant.group);
+windowSun.patchAll(curtains.group);
 const lighting = createLighting(scene, ROOM, room.layout, room.outdoors.skyUniforms, pendant);
 lighting.setShadowSizes(Q().sunShadow, Q().lampShadow);
 // A new finish only changes the light; moving a piece or a new model changes shadows too.
-const furniture = new Furniture(ROOM, renderer, (what) => (what === 'light' ? lightChanged() : shadowsChanged()), { anisotropy: Q().anisotropy });
+let contact = null; // contact shadows (below)
+const furniture = new Furniture(ROOM, renderer, (what) => {
+  windowSun.patchAll(furniture.group); // new models and finishes are new materials
+  contact?.sync();
+  if (what === 'light') lightChanged();
+  else shadowsChanged();
+}, { anisotropy: Q().anisotropy });
 scene.add(furniture.group, furniture.overlay); // the overlay: the info card
+// Contact shadows under the furniture, for the simple path (scene/contact-shadows.js).
+contact = createContactShadows(furniture);
 
 const state = { mode: 'orbit', dims: false, furniture: true, edit: false };
 let camera;
@@ -283,6 +322,8 @@ function updateStatus() {
 
 function setMode(mode) {
   state.mode = mode;
+  furniture.popupMaxY = mode === 'plan' ? SECTION.plan - 0.05 : Infinity;
+  if (furniture.selected) furniture.anchorPopup(furniture.selected);
   camera = { orbit: orbitCam, plan: planCam, walk: walkCam }[mode];
   orbit.enabled = mode === 'orbit';
   plan.enabled = mode === 'plan';
@@ -323,6 +364,7 @@ function setEdit(on) {
 
 // The empty room (the "None" preset): the furniture goes; the room's own fittings stay.
 function setFurniture(on) {
+  if (!on && state.edit) setEdit(false); // nothing to edit in the empty room
   state.furniture = on;
   furniture.group.visible = on;
   if (!on && furniture.selected) selectItem(null);
@@ -366,6 +408,21 @@ const fixtures = createFixtures({
   },
 });
 const wallCut = (name) => !!name && !!room.walls.find((w) => w.name === name)?.cut;
+// What's off the floor against a wall (the plants on the windowsill, pictures) goes with that
+// wall when the 3D view cuts it down, as the curtains do, and can't be picked then: otherwise it
+// would float in front of the room.
+function wallOf(item) {
+  const m = 0.2;
+  if (item.z < -0.35) return null; // out on the balcony
+  if (item.z < m) return 'north';
+  if (item.z > L - m) return 'south';
+  if (item.x < m) return 'west';
+  if (item.x > W - m) return 'east';
+  return null;
+}
+function syncSill() {
+  for (const item of furniture.items) if (item.y) item.pivot.visible = item.present && !wallCut(wallOf(item));
+}
 
 // ---- Picking: measuring, tap-to-walk, furniture -----------------------------
 const raycaster = new THREE.Raycaster();
@@ -382,7 +439,11 @@ const pickFloor = (e) => aim(e).intersectObject(room.floor)[0]?.point ?? null;
 // Furniture only moves while editing, so looking around never moves anything by accident.
 const pickItem = (e) => (state.edit && state.furniture ? furniture.pick(aim(e)) : null);
 // The room's fittings (light, doors, window, curtains) open their card in every mode.
-const pickFixture = (e) => fixtures.pick(aim(e), wallCut);
+// A fitting can't be picked where it isn't drawn: in a wall that's cut away in this view, or in
+// Plan when it's entirely above the plan's cut (the pendant).
+const cutAway = (f) => wallCut(f.wall) || (state.mode === 'plan' && f.updateBox().min.y >= SECTION.plan);
+const pickFixture = (e) => fixtures.pick(aim(e), cutAway);
+furniture.hiddenNow = (item) => item.kind === 'fixture' && cutAway(item); // no outline then either
 // Outside Edit a tap on a piece or a fitting only says what it is (the info card).
 function pickAny(e) {
   const a = state.furniture ? furniture.pick(aim(e)) : null, b = pickFixture(e);
@@ -426,12 +487,11 @@ canvas.addEventListener('pointerup', (e) => {
     if (hit) return selectItem(hit.item);
     if (furniture.selected) return selectItem(null);
   } else {
-    // A tap on a piece or fitting opens its info card (in every view; in Walk you also walk
-    // up to a piece). A tap anywhere else closes the card and then does what it always does.
+    // A tap on a piece or fitting opens its info card (in every view; in Walk you stay where
+    // you are). A tap anywhere else closes the card and then does what it always does.
     const hit = pickAny(e);
     if (hit) {
       if (notes.measure.visible) hideMeasure();
-      if (state.mode === 'walk' && hit.item.kind !== 'fixture') walk.walkTo(hit.point.x, hit.point.z); // stops at the piece's edge
       return selectItem(hit.item);
     }
     if (furniture.selected) selectItem(null);
@@ -519,7 +579,8 @@ function reloadKeepingView() {
 function describeQuality() {
   const q = Q(), r = ratios();
   const res = r.moving < r.still ? `${+r.still.toFixed(2)}× resolution (${+r.moving.toFixed(2)}× while moving)` : `${+r.still.toFixed(2)}× resolution`;
-  return `Now: ${q.name} · ${res} · ${q.sunShadow} px sun shadows${quality.antialias ? '' : ' · no edge smoothing'}`;
+  const shadows = useShadows() ? `${q.sunShadow} px sun shadows` : q.shadows ? `simple shadows: real ones are off, as ${shadowBlock}` : 'simple shadows';
+  return `Now: ${q.name} · ${res} · ${shadows}${quality.antialias ? '' : ' · no edge smoothing'}`;
 }
 settings = createSettings({
   button: document.getElementById('settings-button'),
@@ -553,11 +614,68 @@ shadowCamera.updateMatrixWorld();
 // (shown only in Walk). So shadows are rendered with a camera that sees every layer but has
 // nothing in view; frames and light captures then reuse those maps.
 function renderShadows() {
-  renderer.shadowMap.needsUpdate = true;
-  renderer.render(scene, shadowCamera);
-  renderer.shadowMap.needsUpdate = false;
+  syncWindowSun();
+  if (renderer.shadowMap.enabled) {
+    renderer.shadowMap.needsUpdate = true;
+    renderer.render(scene, shadowCamera);
+    renderer.shadowMap.needsUpdate = false;
+  }
   shadowsDirty = false;
 }
+
+// ---- The simple path: no shadow maps (quality.js) ----------------------------------
+// The sun comes in through the window panes by calculation (lighting/window-sun.js): toward the
+// sun from wherever it is now, through each pane as far as the curtains (closed ones let a
+// little through) and the neighbourhood let it. The neighbourhood's share is a few rays per
+// pane on the CPU against its buildings and trees, a moment after the sun stops moving.
+const _sunDir = new THREE.Vector3();
+let neighbours = windowSun.panes.map(() => 1), raysTimer = 0;
+function syncWindowSun() {
+  const { sun } = lighting;
+  windowSun.setSun(_sunDir.subVectors(sun.position, sun.target.position));
+  const curtained = 1 - 0.85 * curtains.closed;
+  windowSun.setPanes(neighbours.map((k) => k * curtained));
+}
+const sunRays = new THREE.Raycaster();
+sunRays.layers.enableAll(); // the neighbourhood is on layer 1
+sunRays.far = 600;
+const SAMPLES = [[0.5, 0.5], [0.2, 0.2], [0.8, 0.2], [0.2, 0.8], [0.8, 0.8]];
+function traceNeighbours() {
+  clearTimeout(raysTimer);
+  if (!surroundings || renderer.shadowMap.enabled) return;
+  raysTimer = setTimeout(() => {
+    const dir = _sunDir.subVectors(lighting.sun.position, lighting.sun.target.position).normalize();
+    const start = -T.north - ROOM.balcony.depth - 0.3; // past the balcony (that's in the shader)
+    const from = new THREE.Vector3();
+    neighbours = windowSun.panes.map(({ rect, z }) => {
+      if (dir.y <= 0 || dir.z >= 0) return 1; // no sun through the window anyway
+      let clear = 0;
+      for (const [u, v] of SAMPLES) {
+        from.set(THREE.MathUtils.lerp(rect.x, rect.z, u), THREE.MathUtils.lerp(rect.y, rect.w, v), z);
+        from.addScaledVector(dir, (start - z) / dir.z);
+        sunRays.set(from, dir);
+        if (!sunRays.intersectObject(surroundings.group, true).length) clear++;
+      }
+      return clear / SAMPLES.length;
+    });
+    shadowsDirty = true;
+    lightChanged();
+  }, 150);
+}
+
+// Shadow maps on or off: the level (Battery saver and Balanced draw without), or a graphics
+// driver that can't take them. Switching changes every shader once.
+function applyShadows() {
+  const on = useShadows();
+  windowSun.on = !on;
+  contact.setVisible(!on);
+  if (renderer.shadowMap.enabled !== on) {
+    renderer.shadowMap.enabled = on;
+    scene.traverse((o) => o.material && [].concat(o.material).forEach((m) => (m.needsUpdate = true)));
+  }
+  traceNeighbours();
+}
+applyShadows();
 let exposureTarget = renderer.toneMappingExposure;
 
 // Adaptive resolution (quality.js): while the view keeps moving (orbit, pan, walk, a dragged
@@ -576,11 +694,27 @@ let lastFrameAt = 0, lastFrameMoving = false, capturesSeen = 0, programsSeen = 0
 const FIRST_FRAME_WAIT = 500;
 const requested = { furniture: false, surroundings: false };
 const gateUntil = performance.now() + FIRST_FRAME_WAIT;
+// Where the GPU compiles shaders in the background (KHR_parallel_shader_compile: most GPUs in
+// Chrome), the first frame's shaders are compiled with compileAsync, so the page stays
+// responsive and downloads keep being handled meanwhile; without it, compiling blocks anyway.
+const parallelCompile = renderer.extensions.has('KHR_parallel_shader_compile');
+const settleWithin = (promise, ms) => Promise.race([promise, new Promise((r) => setTimeout(r, ms))]);
+let firstCompile = null, firstCompiled = !parallelCompile;
 
 function loop() {
   const dt = Math.min(clock.getDelta(), 0.05);
   const now = performance.now();
   if (first && !(requested.furniture && requested.surroundings) && now < gateUntil) return;
+  if (first && !firstCompiled) {
+    if (!firstCompile) {
+      cutaway.update(state.mode, camera.position);
+      firstCompile = settleWithin(renderer.compileAsync(scene, camera), 4000).catch(() => {}).then(() => {
+        firstCompiled = true;
+        invalidate();
+      });
+    }
+    return;
+  }
   let moved = false, changed = false;
   if (state.mode === 'orbit') {
     moved = stepFocus(dt);
@@ -592,7 +726,8 @@ function loop() {
     moved = true;
   }
   // Exposure glides to its metered value instead of jumping when a light capture lands.
-  if (Math.abs(renderer.toneMappingExposure - exposureTarget) > 0.002) {
+  // (Until within 0.2 %: at night the exposure is 30–70, where a fixed 0.002 took two seconds more.)
+  if (Math.abs(renderer.toneMappingExposure - exposureTarget) > 0.002 * Math.max(1, exposureTarget)) {
     renderer.toneMappingExposure = reduceMotion ? exposureTarget : damp(renderer.toneMappingExposure, exposureTarget, 5, dt);
     changed = true;
   }
@@ -608,15 +743,14 @@ function loop() {
   if (!moved && !changed && !dirty) {
     lastFrameMoving = false;
     // Nothing to draw for half a second: stop asking for frames until something wakes us.
-    if (!moving && ++idleFrames > 30) {
-      looping = false;
-      renderer.setAnimationLoop(null);
-    }
+    if (!moving && ++idleFrames > 30) looping = false;
     return;
   }
   idleFrames = 0;
   dirty = false;
   cutaway.update(state.mode, camera.position);
+  syncSill();
+  if (furniture.selected?.kind === 'fixture') furniture.outlineState(furniture.selected); // its wall may be cut now
   // On Battery saver a dragged piece's shadow follows once it's put down (pointerup redraws).
   if (shadowsDirty && (Q().dragShadows || !dragging())) renderShadows();
   renderer.render(scene, camera);
@@ -635,12 +769,21 @@ function loop() {
     window.__roomReady = true;
   }
 }
+// The loop runs on its own requestAnimationFrame chain rather than renderer.setAnimationLoop():
+// three's loop asks for the next frame after the callback returns, so stopping it from inside
+// the callback doesn't stop it, and starting it again would add a second chain (WebXR, the
+// reason for setAnimationLoop, isn't used here).
+function tick() {
+  if (!looping) return;
+  loop();
+  if (looping) requestAnimationFrame(tick);
+}
 wake = () => {
   idleFrames = 0;
   if (looping) return;
   looping = true;
   clock.getDelta(); // no jump in dt after a sleep
-  renderer.setAnimationLoop(loop);
+  requestAnimationFrame(tick);
 };
 // Input wakes the loop: the controls, Walk's keys and mouse, the joystick all act in their own
 // handlers and leave it to the loop to draw.
@@ -655,7 +798,8 @@ furniture.started.then(() => (requested.furniture = true));
 loading.track('Loading furniture', furniture.load({ preset: linked })).then(
   () => {
     if (!notes.measure.visible) readout.innerHTML = readoutIdle;
-    if (linked) openPreset(linked);
+    const link = linkedPreset(); // again: it may have changed while the furniture loaded
+    if (link) openPreset(link);
     renderEditor();
     describeRoom();
     window.__furnitureReady = true;
@@ -664,6 +808,7 @@ loading.track('Loading furniture', furniture.load({ preset: linked })).then(
     console.error(err);
     readout.textContent = `The furniture models couldn't load (${err.message}). The empty room still works.`;
     announce(readout.textContent);
+    diagnostics.report(readout.textContent, err);
   },
 ).finally(() => settled('furniture'));
 
@@ -680,8 +825,11 @@ function updateSun() {
   const day = new Date(Date.UTC(new Date().getFullYear(), Number(sunMonth.value), 21, 12));
   const hours = Number(sunTime.value);
   const { azimuth, elevation } = sunPosition(zurichTime(Math.floor(hours), Math.round((hours % 1) * 60), day), ROOM.site.lat, ROOM.site.lon);
+  const lampWasOn = lighting.lampOn;
   lighting.setSun(surroundings.direction(azimuth, elevation));
+  if (lighting.lampOn !== lampWasOn) renderEditor(); // the ceiling light's card says what it does now
   syncCasters();
+  traceNeighbours();
   const hh = String(Math.floor(hours)).padStart(2, '0'), mm = String(Math.round((hours % 1) * 60)).padStart(2, '0');
   sunLabel.textContent = elevation > 0 ? `${hh}:${mm}` : `${hh}:${mm} · set`;
   sunTime.setAttribute('aria-valuetext', `${hh}:${mm}${elevation > 0 ? '' : ', after sunset'}`);
@@ -743,16 +891,37 @@ function prepareCapture() {
   };
 }
 
-let rebalanced = false;
+let rebalanced = false, captureCompiled = !parallelCompile;
 async function capture() {
   const outdoor = skyEnv.update(); // the plain sky, for everything outside
   room.outdoors.group.traverse((o) => o.material && o !== room.outdoors.sky && (o.material.envMap = outdoor));
   surroundings?.group.traverse((o) => o.material && (o.material.envMap = outdoor));
+  // The capture renders linear, without tone mapping, so it has its own variant of every shader.
+  // Where that can happen in the background, compile them before the first capture.
+  if (!captureCompiled) {
+    captureCompiled = true;
+    const restore = prepareCapture(), current = renderer.getRenderTarget();
+    let ready;
+    try {
+      renderer.setRenderTarget(indirect.target);
+      ready = renderer.compileAsync(scene, camera);
+    } finally {
+      renderer.setRenderTarget(current);
+      restore();
+    }
+    await settleWithin(ready, 4000).catch(() => {});
+  }
   if (shadowsDirty) renderShadows(); // the capture uses the current shadow maps
   const metering = loading.track('Lighting the room', indirect.capture(prepareCapture));
   invalidate(); // draw the frame with the new light
-  const reading = await metering;
-  if (reading) {
+  let reading = null;
+  try {
+    reading = await metering;
+  } catch (err) {
+    // The read-back fails if the context is lost meanwhile; the next capture meters again.
+    if (!renderer.getContext().isContextLost()) console.warn('Light meter unavailable:', err);
+  }
+  if (reading && Number.isFinite(reading.luminance)) {
     exposureTarget = lighting.exposureFor(reading.luminance);
     // A big white-balance change alters the light itself, so capture once more with it (once;
     // on Battery saver the next capture picks it up instead).
@@ -811,21 +980,15 @@ loading.track('Loading the neighbourhood', loadSurroundings(ROOM, { anisotropy: 
 
 // ---- Applying a quality level (quality.js) ------------------------------------------
 // Everything but antialiasing changes live. The pixel ratio is picked up by the render loop;
-// shadow maps are made anew at their next pass; soft or plain shadows, and a light probe of
-// another size, mean new shaders for every lit material (a one-off pause); the neighbourhood
-// rebuilds its terrain and trees; textures are filtered again.
+// shadow maps are made anew at their next pass; the neighbourhood rebuilds its terrain and
+// trees; textures are filtered again; the parquet is redrawn at its new size.
 function anisotropy() {
   return Math.min(Q().anisotropy, renderer.capabilities.getMaxAnisotropy());
 }
 function applyQuality() {
   const q = Q();
+  applyShadows();
   lighting.setShadowSizes(q.sunShadow, q.lampShadow);
-  const type = q.softShadows ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
-  if (renderer.shadowMap.type !== type) {
-    renderer.shadowMap.type = type;
-    scene.traverse((o) => o.material && [].concat(o.material).forEach((m) => (m.needsUpdate = true)));
-  }
-  indirect.setSize(q.probe);
   surroundings?.setDetail(q.surroundings);
   room.setFloorDetail(q.floorDetail);
   const aniso = anisotropy();
@@ -837,7 +1000,7 @@ function applyQuality() {
     t.anisotropy = aniso;
     t.needsUpdate = true;
   }
-  shadowsChanged(); // new shadow maps, and a capture with the new probe
+  shadowsChanged(); // new shadow maps, and the light captured again
   settings?.render();
 }
 quality.onChange(applyQuality);
@@ -862,7 +1025,7 @@ window.roomApp = {
   THREE, scene, room, furniture, pendant, walk, lighting, sunPosition, zurichTime, renderer, capture,
   views: { orbitCam, orbit, planCam, plan, walkCam },
   get surroundings() { return surroundings; },
-  quality, settings,
+  quality, settings, diagnostics, windowSun, contact,
   loading,
   setMode, setEdit, setLamp, setDoors, setDims, setFurniture, selectItem, undo, invalidate, shadowsChanged, announce, fixtures,
 };

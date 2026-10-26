@@ -19,6 +19,8 @@ A preset can be linked directly, e.g. [`#preset=wood-white`](https://davras5.git
   light, a door, the window or the curtains to switch or open them.
 - **Edit:** move and turn furniture, and change any finish.
 - **Sun:** pick the time of day and month; the light comes on by itself after sunset.
+- **Settings** (the gear): show measurements, and the rendering quality: Auto picks one for
+  the device; Battery saver for older phones, High for desktops.
 
 ## Run locally
 

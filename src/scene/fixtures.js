@@ -33,10 +33,13 @@ export function createFixtures({ room, curtains, pendant, lighting, R, onChange 
         const on = lighting.lampOn ? 'On' : 'Off';
         return lighting.lampMode === 'auto' ? `${on} · automatic, on after sunset` : `${on} · switched by hand`;
       },
-      actions: () => [
-        { label: lighting.lampOn ? 'Turn off' : 'Turn on', run: () => setLamp(lighting.lampOn ? 'off' : 'on') },
-        lighting.lampMode !== 'auto' && { label: 'Automatic', run: () => setLamp('auto') },
-      ].filter(Boolean),
+      actions: () => {
+        const on = lighting.lampOn; // what the button says is what it does, even if the card is old
+        return [
+          { label: on ? 'Turn off' : 'Turn on', run: () => setLamp(on ? 'off' : 'on') },
+          lighting.lampMode !== 'auto' && { label: 'Automatic', run: () => setLamp('auto') },
+        ].filter(Boolean);
+      },
     },
     {
       id: 'door', label: 'Entry door', name: 'Door to the hallway', wall: 'south',
@@ -104,7 +107,7 @@ export function createFixtures({ room, curtains, pendant, lighting, R, onChange 
     pick(raycaster, cut) {
       let best = null;
       for (const f of list) {
-        if (cut(f.wall)) continue;
+        if (cut(f)) continue;
         const hit = raycaster.intersectObjects(f.objects, true)[0];
         if (hit && hit.distance < (best?.distance ?? Infinity)) best = { item: f, point: hit.point, distance: hit.distance };
       }

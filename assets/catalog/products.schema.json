@@ -58,8 +58,10 @@
             "chair",
             "side-table",
             "plant",
-            "lamp"
-          ]
+            "lamp",
+            "art"
+          ],
+          "description": "art: a framed print on a wall (placed with movable: false and a height y); like plants, it isn't counted among a preset's furniture makers."
         },
         "url": {
           "type": "string",
@@ -83,7 +85,7 @@
           "description": "Path of the product's options file, from the site root. Products without one have a single fixed finish."
         },
         "source": {
-          "description": "Where the 3D model comes from, when that isn't the maker: a CC0 plant from Poly Haven, or one made for this project (`url` left out).",
+          "description": "Where the 3D model comes from, when that isn't the maker: a CC0 plant from Poly Haven, or one made for this project (`url` left out); for art, where the artwork's image comes from (the info card shows it as Image).",
           "type": "object",
           "required": [
             "licence"
@@ -93,6 +95,10 @@
             "url": {
               "type": "string",
               "format": "uri"
+            },
+            "name": {
+              "type": "string",
+              "description": "Who publishes it, the info card's link text (e.g. Wikimedia Commons); the maker if left out."
             },
             "author": {
               "type": "string"

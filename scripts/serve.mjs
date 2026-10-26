@@ -2,10 +2,10 @@
 // (ES modules don't load from file://, so index.html needs to be served over http.)
 //
 // Text files (the OBJ models, scripts, JSON) are sent compressed when the browser accepts it,
-// brotli or gzip, as any real host would: the furniture models shrink about 3.5×. Each file is
+// brotli or gzip, as any real host would: the furniture models shrink about 5×. Each file is
 // compressed once per version and kept in memory. Every response carries an ETag and must be
 // revalidated (no-cache), so a reload gets "304 Not Modified" for what hasn't changed and an
-// edit always shows on the next load.
+// edit always shows on the next load. COMPRESS=0 sends everything as it is on disk (to compare).
 import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize, resolve, sep } from 'node:path';
@@ -13,6 +13,7 @@ import { brotliCompressSync, gzipSync, constants as zlib } from 'node:zlib';
 
 const root = resolve(import.meta.dirname, '..');
 const port = Number(process.env.PORT) || 5173;
+const compress = process.env.COMPRESS !== '0';
 const types = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
@@ -28,12 +29,12 @@ const types = {
   '.webp': 'image/webp',
   '.svg': 'image/svg+xml',
 };
-// Worth compressing: text, and the neighbourhood's raw float arrays (about 2× smaller).
+// Worth compressing: text, and the neighbourhood's raw float arrays (about 4× smaller).
 const compressible = new Set(['.html', '.js', '.mjs', '.css', '.json', '.obj', '.gltf', '.svg', '.bin']);
 const packed = new Map(); // `${file}|${etag}|${encoding}` → Buffer
 
 function encodingFor(req, ext) {
-  if (!compressible.has(ext)) return null;
+  if (!compress || !compressible.has(ext)) return null;
   const accept = String(req.headers['accept-encoding'] ?? '');
   if (/\bbr\b/.test(accept)) return 'br';
   if (/\bgzip\b/.test(accept)) return 'gzip';

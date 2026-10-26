@@ -62,6 +62,7 @@ export function createEditor({ furniture, state, canvas, stage, editor, aim, pic
     renderEditor();
   }
   function undo() {
+    if (applying != null) return; // a preset is still going on: its own step can't be undone halfway
     const last = history.pop();
     if (!last) return;
     nudging = null;
@@ -94,7 +95,7 @@ export function createEditor({ furniture, state, canvas, stage, editor, aim, pic
     document.getElementById('sel-done').hidden = !item;
     document.getElementById('sel-remove').hidden = !item?.home.optional;
     const undoButton = document.getElementById('sel-undo');
-    undoButton.disabled = history.length === 0;
+    undoButton.disabled = history.length === 0 || applying != null;
     undoButton.title = history.length ? 'Undo the last change (Ctrl+Z)' : 'Nothing to undo yet';
     // Pieces in the room select; optional ones that aren't (the pouf) can be added.
     document.getElementById('ed-pieces').replaceChildren(
@@ -109,8 +110,9 @@ export function createEditor({ furniture, state, canvas, stage, editor, aim, pic
     if (item) {
       const d = furniture.describe(item);
       const link = document.getElementById('sel-name');
-      link.textContent = `${d.maker} ${d.name}`;
-      link.href = d.url;
+      link.textContent = d.source ? d.name : `${d.maker} ${d.name}`;
+      if (d.url) link.href = d.url;
+      else link.removeAttribute('href');
       // On phones the finish is in the Finish line below, so this stays one short line.
       document.getElementById('sel-size').textContent = [cm(d.size), narrowScreen() ? null : d.finish, priceText(d)].filter(Boolean).join(' · ');
     }
@@ -120,7 +122,8 @@ export function createEditor({ furniture, state, canvas, stage, editor, aim, pic
   // ---- Info card and finish pickers (helpers for renderEditor) ----
   const host = (url) => new URL(url).hostname.replace(/^www\./, '');
   const cm = ({ w, d, h }) => `${Math.round(w * 100)} × ${Math.round(d * 100)} × ${Math.round(h * 100)} cm`;
-  const money = (n, cur = 'EUR') => `${cur} ${n.toLocaleString('en-US')}`;
+  // Whole amounts as they are (EUR 1,749); others with their rappen (CHF 166.60).
+  const money = (n, cur = 'EUR') => `${cur} ${n.toLocaleString('en-US', { minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 })}`;
   const priceText = (d) => (d.price ? money(d.price.amount, d.price.currency) : d.offered ? '' : 'not sold in this size');
   const narrowScreen = () => window.innerWidth < 640;
   const coarse = window.matchMedia('(pointer: coarse)');
@@ -220,8 +223,9 @@ export function createEditor({ furniture, state, canvas, stage, editor, aim, pic
         price && el('div', {}, el('dt', {}, 'Price'), el('dd', {}, price, d.itemNumber && el('small', {}, ` · ${d.itemNumber}`))),
         d.shop && el('div', {}, el('dt', {}, 'Shop'), el('dd', {},
           el('a', { class: 'sel-pop-link', href: d.shop, target: '_blank', rel: 'noopener' }, `This configuration at ${host(d.shop)} ↗`))),
-        d.source && el('div', {}, el('dt', {}, 'Model'), el('dd', {},
-          d.source.url ? el('a', { class: 'sel-pop-link', href: d.source.url, target: '_blank', rel: 'noopener' }, `${d.maker} ↗`) : d.maker,
+        // A plant's model, or a print's artwork (its image).
+        d.source && el('div', {}, el('dt', {}, item.spec.category === 'art' ? 'Image' : 'Model'), el('dd', {},
+          d.source.url ? el('a', { class: 'sel-pop-link', href: d.source.url, target: '_blank', rel: 'noopener' }, `${d.source.name ?? d.maker} ↗`) : d.source.name ?? d.maker,
           el('small', {}, ` · ${d.source.licence}`)))),
       !state.edit && d.parts.length && el('button', {
         type: 'button', class: 'sel-pop-cta',
@@ -298,7 +302,7 @@ export function createEditor({ furniture, state, canvas, stage, editor, aim, pic
   function finishGroup(item, g) {
     const labelId = `ed-g-${g.id}`;
     const choice = g.choice;
-    const extra = (o) => (g.price === 'add' && o.price ? ` (+${money(o.price)})` : '');
+    const extra = (o) => (g.price === 'add' && o.price ? ` (+${money(o.price, item.options?.currency)})` : '');
     const head = el('div', { class: 'ed-group-head' },
       el('span', { class: 'ed-group-label', id: labelId }, g.label),
       el('span', { class: 'ed-choice' }, `${choice.name}${extra(choice)}`));
@@ -435,6 +439,7 @@ export function createEditor({ furniture, state, canvas, stage, editor, aim, pic
     }
   }
   addEventListener('hashchange', () => {
+    if (!furniture.items.length) return; // still loading: main.js applies the link once the room is in
     const id = linkedPreset();
     if (id && id !== linkShown) pickPreset(id);
   });
@@ -475,7 +480,7 @@ export function createEditor({ furniture, state, canvas, stage, editor, aim, pic
     if (leaving) selectItem(null);
     setFurniture(true);
     applying = id;
-    renderPresets();
+    renderEditor(); // the presets, and Undo off until it's done
     const work = preset ? furniture.applyPreset(id) : Promise.all([...target.values()].map((s) => furniture.restore(s)));
     track(preset ? `Applying ${preset.name}` : 'Going back to your changes', work)
       .catch((err) => console.error(err))

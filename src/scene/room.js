@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { parquetTextureAsync, PARQUET_AVERAGE, tileTexture } from './textures.js';
+import { parquetTextureAsync, PARQUET_AVERAGE, tileTexture, concreteTexture } from './textures.js';
 import { cornerAO } from '../lighting/corner-ao.js';
 import { boxProjectedReflections, noShadowNormalBias, noAreaLights } from '../lighting/shader-hooks.js';
 
@@ -46,7 +46,7 @@ export function buildRoom(R, renderer, { anisotropy, floorDetail = 400 } = {}) {
   boxProjectedReflections(M.floor, roomBox, PROBE(R));
   noShadowNormalBias(M.floor);
   // The balcony is outside, behind the window's area lights (which shine one way, into the room).
-  for (const m of [M.concrete, M.rail, M.mesh]) noAreaLights(m);
+  for (const m of [M.concrete, M.parapet, M.capping, M.screen, M.soffit, M.awning]) noAreaLights(m);
 
   // Positions derived from the config, in room coordinates.
   const frameZ = -R.window.reveal; // room-side face of the window and balcony-door frames
@@ -246,34 +246,54 @@ export function buildRoom(R, renderer, { anisotropy, floorDetail = 400 } = {}) {
   }
 
   // ---- Balcony outside the window wall -----------------------------------
+  // As in the photos taken on it: a concrete slab a step below the room, inside a solid parapet
+  // along the front and a short side one at the right-hand end, both under the same dark metal
+  // cover. A grey-green metal screen on the party-wall line parts it from the neighbour's
+  // balcony; it goes with the left-hand wall, so the 3D view cuts it down with that wall. The
+  // balcony above (its slab, and an awning's cassette under the front edge) is the roof, shown
+  // with the outdoors; its shade comes from lighting/window-sun.js. The parapet and the screen
+  // cast shadows (a few boxes), so the balcony floor isn't sunlit right up to them.
   const balcony = new THREE.Group();
   balcony.name = 'balcony';
+  const balconyRoof = new THREE.Group();
+  balconyRoof.name = 'balcony above';
   {
-    const bd = R.balcony.depth, drop = R.balcony.drop;
-    const x0 = -T.west, x1 = W + T.east, z1 = -T.north, z0 = z1 - bd;
-    addBox(balcony, M.concrete, x1 - x0, 0.18, bd, (x0 + x1) / 2, -drop - 0.09, (z0 + z1) / 2, { cast: false });
-    const top = 1.0 - drop;
-    const rails = [
-      { a: [x0 + 0.03, z0 + 0.03], b: [x1 - 0.03, z0 + 0.03] },
-      { a: [x0 + 0.03, z0 + 0.03], b: [x0 + 0.03, z1] },
-      { a: [x1 - 0.03, z0 + 0.03], b: [x1 - 0.03, z1] },
-    ];
-    for (const { a, b } of rails) {
-      const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
-      const alongX = Math.abs(b[0] - a[0]) > Math.abs(b[1] - a[1]);
-      const mx = (a[0] + b[0]) / 2, mz = (a[1] + b[1]) / 2;
-      const [sx, sz] = alongX ? [len, 0.04] : [0.04, len];
-      addBox(balcony, M.rail, sx, 0.04, sz, mx, top, mz, { cast: false });
-      addBox(balcony, M.rail, sx, 0.03, sz, mx, -drop + 0.12, mz, { cast: false });
-      const yLo = -drop + 0.135, yHi = top - 0.02;
-      const panel = addBox(balcony, M.mesh, alongX ? len : 0.01, yHi - yLo, alongX ? 0.01 : len, mx, (yLo + yHi) / 2, mz, { cast: false, receive: false });
-      panel.renderOrder = 2;
-      const posts = Math.max(2, Math.round(len / 1.2) + 1);
-      for (let i = 0; i < posts; i++) {
-        const t = i / (posts - 1);
-        addBox(balcony, M.rail, 0.04, top + drop, 0.04, a[0] + (b[0] - a[0]) * t, (top - drop) / 2, a[1] + (b[1] - a[1]) * t, { cast: false });
-      }
-    }
+    const B = R.balcony, drop = B.drop, t = B.wall, cap = 0.05, top = B.parapet - drop;
+    const x0 = -T.west, x1 = B.to, z1 = -T.north, z0 = z1 - B.depth; // party wall → side parapet, facade → front
+    const noCast = { cast: false };
+    addBox(balcony, M.concrete, x1 - x0, 0.18, B.depth, (x0 + x1) / 2, -drop - 0.09, (z0 + z1) / 2, noCast);
+    M.concrete.map.repeat.set(x1 - x0, B.depth); // the texture tiles every metre
+    // Parapet walls, up to their capping: along the front, and the side one back to the facade.
+    const wh = top - cap + drop, wy = (top - cap - drop) / 2;
+    addBox(balcony, M.parapet, x1 - x0, wh, t, (x0 + x1) / 2, wy, z0 + t / 2);
+    addBox(balcony, M.parapet, t, wh, z1 - z0 - t, x1 - t / 2, wy, (z0 + t + z1) / 2);
+    // Both parapets wear the same metal cover: 2 cm proud of both faces along the front, running
+    // into the side's, which is a little thicker and 3–4 cm proud.
+    addBox(balcony, M.capping, x1 - t - x0, cap, t + 0.04, (x0 + x1 - t) / 2, top - cap / 2, z0 + t / 2);
+    addBox(balcony, M.capping, t + 0.07, cap + 0.015, z1 - z0 + 0.03, x1 - t / 2 - 0.005, top + 0.01 - (cap + 0.015) / 2, (z0 - 0.03 + z1) / 2);
+
+    // The screen: a 4 cm panel standing 5 cm clear of the floor, from the facade to the front of
+    // the parapet, its top outer corner rounded. Outlined in (out from the facade, up).
+    const sl = B.depth - 0.01, sh = B.screen - 0.05, r = 0.18;
+    const outline = new THREE.Shape();
+    outline.moveTo(0, 0);
+    outline.lineTo(sl, 0);
+    outline.lineTo(sl, sh - r);
+    outline.absarc(sl - r, sh - r, r, 0, Math.PI / 2, false);
+    outline.lineTo(0, sh);
+    outline.closePath();
+    const screenGeo = new THREE.ExtrudeGeometry(outline, { depth: 0.04, bevelEnabled: false, curveSegments: 6 });
+    screenGeo.rotateY(Math.PI / 2); // outline x → −z (outward), the extrusion → +x
+    screenGeo.translate(-T.west / 2 - 0.02, 0.05 - drop, z1);
+    const screen = new THREE.Mesh(screenGeo, M.screen);
+    screen.castShadow = screen.receiveShadow = true;
+    screen.name = 'balcony screen';
+    west.add(screen);
+
+    // The balcony above, as deep as this one: only its underside and front edge are ever seen.
+    const roof = { cast: false, receive: false };
+    addBox(balconyRoof, M.soffit, x1 - x0, 0.18, B.depth, (x0 + x1) / 2, B.soffit + 0.09, (z0 + z1) / 2, roof);
+    addBox(balconyRoof, M.awning, x1 - x0 - 0.1, 0.13, 0.15, (x0 + x1) / 2, B.soffit - 0.065, z0 + 0.12, roof);
     root.add(balcony);
   }
 
@@ -281,6 +301,7 @@ export function buildRoom(R, renderer, { anisotropy, floorDetail = 400 } = {}) {
   const outdoors = buildOutdoors(W, L, T);
   outdoors.group.visible = false;
   root.add(outdoors.group);
+  outdoors.group.add(balconyRoof); // the balcony above, which would only hide the room from above
 
   // ---- Doors that open and close ------------------------------------------
   // Everything that swings open, by what it belongs to (the window's two sashes open together).
@@ -499,7 +520,7 @@ function createMaterials(R, aniso) {
     // own specular is turned down, or two glossy layers stack into a milky haze at low angles.
     floor: new THREE.MeshPhysicalMaterial({ map: parquet, roughness: 0.7, specularIntensity: 0.4, clearcoat: 0.2, clearcoatRoughness: 0.35, dithering: true }),
     // Section caps on cut walls: flat black, like the fill of a cut wall in an architectural section.
-    section: new THREE.MeshBasicMaterial({ color: 0x15171b, side: THREE.DoubleSide }),
+    section: new THREE.MeshBasicMaterial({ color: 0x15171b, side: THREE.DoubleSide, toneMapped: false }),
     oak: new THREE.MeshStandardMaterial({ color: 0xb8875a, roughness: 0.55 }),
     frame: new THREE.MeshStandardMaterial({ color: 0xf6f6f3, roughness: 0.38 }),
     leaf: new THREE.MeshStandardMaterial({ color: 0xf1f0ea, roughness: 0.42 }),
@@ -508,9 +529,13 @@ function createMaterials(R, aniso) {
     glass: new THREE.MeshStandardMaterial({ color: 0xd2e4ec, roughness: 0.02, transparent: true, opacity: 0.14, depthWrite: false }),
     tiles: new THREE.MeshStandardMaterial({ map: tiles, roughness: 0.7 }),
     hallWall: new THREE.MeshStandardMaterial({ color: 0xe4e5e2, roughness: 0.92 }),
-    concrete: new THREE.MeshStandardMaterial({ color: 0xc9c4bb, roughness: 0.95 }),
-    rail: new THREE.MeshStandardMaterial({ color: 0x5b6168, metalness: 0.6, roughness: 0.45 }),
-    mesh: new THREE.MeshStandardMaterial({ color: 0x4d535a, transparent: true, opacity: 0.25, depthWrite: false, side: THREE.DoubleSide }),
+    // The balcony, as in its photos.
+    concrete: new THREE.MeshStandardMaterial({ map: concreteTexture(), roughness: 0.95 }), // the floor slab, plain concrete
+    parapet: new THREE.MeshStandardMaterial({ color: 0xc2bdb2, roughness: 0.92 }), // painted concrete
+    capping: new THREE.MeshStandardMaterial({ color: 0x4b4e50, roughness: 0.5 }), // dark grey powder-coated metal, on both parapets
+    screen: new THREE.MeshStandardMaterial({ color: 0x7b8574, roughness: 0.6 }), // powder-coated metal, a muted grey green
+    soffit: new THREE.MeshStandardMaterial({ color: 0xdedbd3, roughness: 0.95 }), // the balcony above
+    awning: new THREE.MeshStandardMaterial({ color: 0x666869, roughness: 0.6 }), // its cassette, grey
   };
 }
 

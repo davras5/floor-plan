@@ -7,7 +7,7 @@
         "match": "Upholstery",
         "uvPerM": 1000,
         "boxUV": true,
-        "material": {"color": "#a09b91", "roughness": 0.95}
+        "material": {"color": "#a49f96", "roughness": 0.95}
       },
       {"id": "base", "match": "Base", "material": {"color": "#e4e4e4", "roughness": 0.1, "metalness": 1}}
     ],
@@ -17,9 +17,9 @@
         "match": "Top",
         "uvPerM": 1000,
         "planarUV": "xz",
-        "material": {"color": "#ba9568", "roughness": 0.62}
+        "material": {"color": "#b4a78c", "roughness": 0.62}
       },
-      {"id": "base", "match": "Base", "material": {"color": "#b9b5aa", "roughness": 0.55}},
+      {"id": "base", "match": "Base", "material": {"color": "#b8b6af", "roughness": 0.55}},
       {"id": "glides", "match": "Glides", "material": {"color": "#1c1c1c", "roughness": 0.6}}
     ]
   },
@@ -37,8 +37,8 @@
         "file": "assets/furniture/muuto-in-situ-2-seater-7/model.obj",
         "scale": 0.001,
         "parts": [
-          {"id": "frame", "match": "Legs", "material": {"color": "#2f2f2f", "roughness": 0.55}},
-          {"id": "upholstery", "match": "Seat", "uvPerM": 1000, "material": {"color": "#a09b91", "roughness": 0.95}}
+          {"id": "frame", "match": "Legs", "material": {"color": "#2f2f2f", "roughness": 0.74, "metalness": 1}},
+          {"id": "upholstery", "match": "Seat", "uvPerM": 1000, "material": {"color": "#a49f96", "roughness": 0.95}}
         ]
       }
     },
@@ -62,13 +62,13 @@
             "planarUV": "zx",
             "material": {"color": "#d6d2c6", "roughness": 0.72}
           },
-          {"id": "legs", "match": "Vertical", "uvPerM": 39.37, "material": {"color": "#d8bd98", "roughness": 0.58}},
+          {"id": "legs", "match": "Vertical", "uvPerM": 39.37, "material": {"color": "#d2bda1", "roughness": 0.58}},
           {
             "id": "rails",
             "match": "Horizontal",
             "uvPerM": 39.37,
             "rotate": 90,
-            "material": {"color": "#d8bd98", "roughness": 0.58}
+            "material": {"color": "#d2bda1", "roughness": 0.58}
           }
         ]
       }
@@ -86,8 +86,8 @@
         "file": "assets/furniture/muuto-fiber-side-chair-wood/model.obj",
         "scale": 0.001,
         "parts": [
-          {"id": "shell", "match": "Shell", "material": {"color": "#e7e5e3", "roughness": 0.4}},
-          {"id": "base", "match": "Base", "uvPerM": 2.5, "material": {"color": "#c6a06e", "roughness": 0.7}},
+          {"id": "shell", "match": "Shell", "material": {"color": "#e7e5e3", "roughness": 0.35}},
+          {"id": "base", "match": "Base", "uvPerM": 1000, "boxUV": true, "material": {"color": "#b49873", "roughness": 0.71}},
           {"id": "glides", "match": "Glide", "material": {"color": "#1c1c1c", "roughness": 0.6}}
         ]
       }
@@ -155,6 +155,28 @@
         }
       }
     },
+    "muuto-post-floor-lamp": {
+      "maker": "Muuto",
+      "name": "Post Floor Lamp",
+      "category": "lamp",
+      "url": "https://www.muuto.com/product/Post-Floor-Lamp/",
+      "itemUrl": "https://www.muuto.com/product/Post-Floor-Lamp--POSFLR/{item}/",
+      "size": {"width": 0.095, "depth": 0.095, "height": 1.362},
+      "finish": "Black",
+      "options": "assets/furniture/muuto-post-floor-lamp/options.json",
+      "model": {
+        "file": "assets/furniture/muuto-post-floor-lamp/model.obj",
+        "scale": 0.001,
+        "parts": [
+          {"id": "base", "match": "^Base$", "material": {"color": "#28292b", "roughness": 0.6, "metalness": 0.1}},
+          {"id": "rod", "match": "^Rod$", "material": {"color": "#28292b", "roughness": 0.6, "metalness": 0.1}},
+          {"id": "shade", "match": "^(Shade|Grommet)$", "material": {"color": "#28292b", "roughness": 0.6, "metalness": 0.1}},
+          {"id": "diffuser", "match": "^Diffuser$", "material": {"color": "#edebe5", "roughness": 0.3}},
+          {"id": "cord", "match": "^Cord$", "material": {"color": "#28292b", "roughness": 0.75}},
+          {"id": "drops", "match": "^CableDrops$", "material": {"color": "#28292b", "roughness": 0.5}}
+        ]
+      }
+    },
     "polyhaven-potted-plant-04": {
       "maker": "Poly Haven",
       "name": "Potted Plant 04 (zebra haworthia)",
@@ -185,6 +207,55 @@
       "finish": "Charcoal ceramic pot",
       "source": {"author": "Procedural, scripts/plants/snake-plant.mjs", "licence": "CC0 1.0"},
       "model": {"file": "assets/plants/snake-plant/model.glb"}
+    },
+    "beyeler-hodler-grammont-60x80": {
+      "maker": "Fondation Beyeler",
+      "name": "Ferdinand Hodler, Le Grammont après la pluie, 1917 (art print, 60 × 80 cm)",
+      "category": "art",
+      "url": "https://shop.fondationbeyeler.ch/en/artikel/ferdinand-hodler-le-grammont-apres-la-pluie-1917-28844",
+      "itemUrl": "https://shop.fondationbeyeler.ch/en/artikel/ferdinand-hodler-le-grammont-apres-la-pluie-1917-{item}",
+      "size": {"width": 0.83, "depth": 0.025, "height": 0.63},
+      "finish": "White wood frame",
+      "options": "assets/art/beyeler-hodler-grammont-60x80/options.json",
+      "source": {
+        "url": "https://commons.wikimedia.org/wiki/File:The_Grammont_after_the_Rain_by_Ferdinand_Hodler.jpg",
+        "name": "Wikimedia Commons",
+        "author": "Ferdinand Hodler (1853–1918)",
+        "licence": "public domain"
+      },
+      "model": {
+        "file": "assets/art/beyeler-hodler-grammont-60x80/model.glb",
+        "parts": [
+          {"id": "frame", "match": "^Frame$", "uvPerM": 1, "material": {"color": "#f1f0ec", "roughness": 0.6}},
+          {"id": "paper", "match": "^Paper$", "material": {"color": "#efede6", "roughness": 0.9}},
+          {"id": "image", "match": "^Image$", "material": {"texture": "assets/art/beyeler-hodler-grammont-60x80/print.jpg", "tile": 1, "roughness": 0.85}}
+        ]
+      }
+    },
+    "beyeler-hodler-mont-blanc-50x70": {
+      "maker": "Fondation Beyeler",
+      "name": "Ferdinand Hodler, Le Mont Blanc aux nuages roses, 1918 (art print, 50 × 70 cm)",
+      "category": "art",
+      "url": "https://shop.fondationbeyeler.ch/en/artikel/ferdinand-hodler-le-mont-blanc-aux-nuages-roses-1918-28845",
+      "itemUrl": "https://shop.fondationbeyeler.ch/en/artikel/ferdinand-hodler-le-mont-blanc-aux-nuages-roses-1918-{item}",
+      "size": {"width": 0.73, "depth": 0.025, "height": 0.53},
+      "finish": "White wood frame",
+      "options": "assets/art/beyeler-hodler-mont-blanc-50x70/options.json",
+      "source": {
+        "url": "https://commons.wikimedia.org/wiki/File:%27Mont-Blanc_with_Pink_Cloud%27_by_Ferdinand_Hodler,_1918.jpg",
+        "name": "Wikimedia Commons",
+        "author": "Ferdinand Hodler (1853–1918)",
+        "licence": "public domain"
+      },
+      "model": {
+        "file": "assets/art/beyeler-hodler-mont-blanc-50x70/model.glb",
+        "parts": [
+          {"id": "frame", "match": "^Frame$", "uvPerM": 1, "material": {"color": "#f1f0ec", "roughness": 0.6}},
+          {"id": "paper", "match": "^Paper$", "material": {"color": "#efede6", "roughness": 0.9}},
+          {"id": "image", "match": "^Image$", "material": {"texture": "assets/art/beyeler-hodler-mont-blanc-50x70/print.jpg", "tile": 1, "roughness": 0.85}}
+        ],
+        "variants": {"moebe": {"file": "assets/art/beyeler-hodler-mont-blanc-50x70/moebe.glb"}}
+      }
     }
   }
 }
