@@ -164,6 +164,15 @@
       "size": {"width": 0.095, "depth": 0.095, "height": 1.362},
       "finish": "Black",
       "options": "assets/furniture/muuto-post-floor-lamp/options.json",
+      "lights": {
+        "glow": "diffuser",
+        "angle": 84,
+        "penumbra": 1,
+        "spots": [
+          {"position": [-0.0288, 0.7528, 0.0126], "direction": [0, -0.492, 0.870]},
+          {"position": [0.0483, 1.2453, 0.0401], "direction": [0.819, -0.574, 0]}
+        ]
+      },
       "model": {
         "file": "assets/furniture/muuto-post-floor-lamp/model.obj",
         "scale": 0.001,

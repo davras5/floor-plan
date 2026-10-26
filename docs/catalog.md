@@ -56,14 +56,14 @@ The option lists are kept per product, because they are long: up to 1,005 uphols
 |---|---|---|
 | key | required | The product id, `maker-product-variant`: lower case, used by pieces and presets. |
 | `maker`, `name` | required | As the maker sells it, with the size where there are several. |
-| `category` | required | `sofa`, `pouf`, `dining-table`, `chair`, `side-table`, `plant` or `lamp`. |
+| `category` | required | `sofa`, `pouf`, `dining-table`, `chair`, `side-table`, `plant`, `lamp` or `art` (a framed print). Plants and art aren't counted among a preset's makers. |
 | `url` | `url` or `source` | The product's page. The info card's product name links there. |
 | `itemUrl` | optional | The page of one configuration. `{item}` becomes the configured item number (built from the options file's `item` pattern), and `{<group>}` that group's code. The card's **Shop** link goes there. |
 | `size` | required | The maker's listed W × D × H. The room uses the model's own box, which can differ by a few centimetres. |
 | `footprint` | optional | What stands on the floor, when smaller than the whole model (a plant's pot under its crown). It's used for walls and collisions, and the model's origin is its centre. |
 | `finish` | optional | The default finish in words, shown until the options load. |
 | `options` | optional | Path of the product's options file. Without one, the finish is fixed. |
-| `source` | optional | `{ url?, author?, licence }`, for a model that isn't the maker's (the plants). |
+| `source` | optional | `{ url?, name?, author?, licence }`, for a model that isn't the maker's (the plants), or a print's artwork (shown as **Image** on the card). `name` is the link's text (e.g. Wikimedia Commons), the maker if left out. |
 | `model` | required | `file` (`.obj` or `.glb`), `scale` (model units to metres), `parts` (or the name of a `partSets` list), and `variants`: other models of the product that an option switches to (`model` on an option), such as the Outline on castors or another size. |
 
 A part is `{ id, match, material, uvPerM?, planarUV?, boxUV?, rotate? }`:
@@ -116,7 +116,10 @@ how it's placed when nothing else says where.
   `right` or `x` (the centre), and one of `window`, `door` or `z`. Distances to walls keep a piece
   where it belongs when the room's measurements or the piece's model change. For example, the
   dining table is 20 cm from the door wall in any room length. `y` stands it on something
-  (the windowsill).
+  (the windowsill), or for a picture, is the height of its frame's bottom edge. A picture
+  (`category: "art"`) is turned to face into the room and placed 0–5 cm from the wall behind it
+  (`left: 0.002` with rotation 90, `door: 0.002` with 180), so it goes with that wall when the 3D
+  view cuts it away; the check makes sure of both.
 - **`attach`** places it by another piece. By default it goes in front of that piece's window end
   (the pouf):
   - `front`: the gap from that piece's front;
@@ -132,7 +135,7 @@ how it's placed when nothing else says where.
   set moves together.
 - **`present`**, **`optional`** (can be added and removed in Edit), **`match`** (follows another
   piece's finish until given its own), and **`movable: false`** (stays put in Edit and isn't kept
-  inside the walls: the windowsill plant).
+  inside the walls: the windowsill plant, the pictures).
 
 A piece placed relative to another comes after it in the list.
 

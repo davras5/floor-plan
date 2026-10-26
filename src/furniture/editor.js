@@ -4,7 +4,9 @@ import * as THREE from 'three';
 // (looks, finish pickers, model choice) and the info card next to a selected piece.
 // main.js creates it once and passes in what it needs from the rest of the app.
 
-export function createEditor({ furniture, state, canvas, stage, editor, aim, pickItem, invalidate, setEdit, setFurniture = () => {}, getCamera, announce, W, L, track = (label, p) => p }) {
+// lightOf(item): for a piece with its own light (a floor lamp), { state, actions: [{ label, run }] }
+// for its card; null for the rest.
+export function createEditor({ furniture, state, canvas, stage, editor, aim, pickItem, invalidate, setEdit, setFurniture = () => {}, getCamera, announce, W, L, track = (label, p) => p, lightOf = () => null }) {
   // ---- Editing furniture: select, drag, rotate, undo -----------------------------
   // The stage listens in the capture phase, so grabbing a piece never reaches the
   // camera controls underneath: dragging furniture moves it, dragging elsewhere navigates.
@@ -185,7 +187,7 @@ export function createEditor({ furniture, state, canvas, stage, editor, aim, pic
     }
     const opened = popupFor !== item;
     popupFor = item;
-    const key = JSON.stringify(fixture ? [item.id, item.state(), item.actions().map((a) => a.label)] : [item.id, item.key, item.variant, item.choices, state.edit]);
+    const key = JSON.stringify(fixture ? [item.id, item.state(), item.actions().map((a) => a.label)] : [item.id, item.key, item.variant, item.choices, state.edit, lightOf(item)?.state]);
     if (key !== popupKey) {
       popupKey = key;
       (fixture ? fillFixture : fillPopup)(item, card);
@@ -206,6 +208,8 @@ export function createEditor({ furniture, state, canvas, stage, editor, aim, pic
   function fillPopup(item, card) {
     const d = furniture.describe(item);
     const titleId = `sel-pop-title-${item.id}`;
+    const light = lightOf(item); // a lamp's own switch
+    const refocus = light && card.contains(document.activeElement) && document.activeElement.closest('.sel-pop-actions');
     card.setAttribute('role', 'dialog');
     card.setAttribute('aria-modal', 'false');
     card.setAttribute('aria-labelledby', titleId);
@@ -226,12 +230,19 @@ export function createEditor({ furniture, state, canvas, stage, editor, aim, pic
         // A plant's model, or a print's artwork (its image).
         d.source && el('div', {}, el('dt', {}, item.spec.category === 'art' ? 'Image' : 'Model'), el('dd', {},
           d.source.url ? el('a', { class: 'sel-pop-link', href: d.source.url, target: '_blank', rel: 'noopener' }, `${d.source.name ?? d.maker} ↗`) : d.source.name ?? d.maker,
-          el('small', {}, ` · ${d.source.licence}`)))),
+          el('small', {}, ` · ${d.source.licence}`))),
+        light && el('div', {}, el('dt', {}, 'Light'), el('dd', {}, light.state))),
+      // A lamp's switch acts right away, like a fitting's; the card is redrawn with the new state.
+      light && el('div', { class: 'sel-pop-actions' }, ...light.actions.map((a, i) => el('button', {
+        type: 'button', class: i ? 'sel-pop-cta secondary' : 'sel-pop-cta',
+        on: { click: () => { a.run(); say(`${d.label}: ${lightOf(item)?.state ?? ''}`); } },
+      }, a.label))),
       !state.edit && d.parts.length && el('button', {
-        type: 'button', class: 'sel-pop-cta',
+        type: 'button', class: light ? 'sel-pop-cta secondary' : 'sel-pop-cta',
         on: { click: () => { setEdit(true); finishPanel.open = true; renderEditor(); } },
       }, 'Change finish'),
     ].filter(Boolean));
+    if (refocus) card.querySelector('.sel-pop-actions .sel-pop-cta')?.focus();
   }
 
   // A fitting's card: what it is, its state, and what it can do (Open / Close, Turn on / off…).

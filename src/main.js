@@ -20,6 +20,7 @@ import { sunPosition, zurichTime } from './lighting/sun.js';
 import { createIndirect, skyEnvironment } from './lighting/indirect.js';
 import { createQuality, shadowsBlocked, blockShadows } from './quality.js';
 import { createWindowSun } from './lighting/window-sun.js';
+import { createPieceLights } from './lighting/piece-lights.js';
 import { createContactShadows } from './scene/contact-shadows.js';
 import { createSettings } from './ui/settings.js';
 import { createDiagnostics } from './ui/diagnostics.js';
@@ -141,16 +142,19 @@ windowSun.patchAll(curtains.group);
 const lighting = createLighting(scene, ROOM, room.layout, room.outdoors.skyUniforms, pendant);
 lighting.setShadowSizes(Q().sunShadow, Q().lampShadow);
 // A new finish only changes the light; moving a piece or a new model changes shadows too.
-let contact = null; // contact shadows (below)
+let contact = null, pieceLights = null; // contact shadows and the floor lamp's light (below)
 const furniture = new Furniture(ROOM, renderer, (what) => {
   windowSun.patchAll(furniture.group); // new models and finishes are new materials
   contact?.sync();
+  if (pieceLights) lighting.setPieceLights(pieceLights());
   if (what === 'light') lightChanged();
   else shadowsChanged();
 }, { anisotropy: Q().anisotropy });
 scene.add(furniture.group, furniture.overlay); // the overlay: the info card
 // Contact shadows under the furniture, for the simple path (scene/contact-shadows.js).
 contact = createContactShadows(furniture);
+// A floor lamp's light hangs from the lamp and comes on with the ceiling light (lighting/piece-lights.js).
+pieceLights = createPieceLights(furniture, Q().lampShadow);
 
 const state = { mode: 'orbit', dims: false, furniture: true, edit: false };
 let camera;
@@ -541,8 +545,25 @@ canvas.addEventListener('dblclick', (e) => {
 });
 
 // ---- Editing furniture (editor.js) -------------------------------------------------
+// A floor lamp's card has its own switch, apart from the ceiling light's (lighting/piece-lights.js).
+function lightOf(item) {
+  if (!item.spec?.lights) return null;
+  const on = lighting.pieceLampOn(item.id), mode = lighting.pieceLampMode(item.id);
+  return {
+    state: `${on ? 'On' : 'Off'} · ${mode === 'auto' ? 'automatic, on after sunset' : 'switched by hand'}`,
+    actions: [
+      { label: on ? 'Turn light off' : 'Turn light on', run: () => setPieceLamp(item, on ? 'off' : 'on') },
+      mode !== 'auto' && { label: 'Automatic', run: () => setPieceLamp(item, 'auto') },
+    ].filter(Boolean),
+  };
+}
+function setPieceLamp(item, mode) {
+  lighting.setPieceLamp(item.id, mode);
+  shadowsChanged(); // its light and shadows, and the room's light captured again
+  renderEditor();
+}
 const { selectItem, undo, renderEditor, openPreset, linkedPreset, dragging } = createEditor({
-  furniture, state, canvas, stage, editor, aim, pickItem, invalidate, announce, W, L,
+  furniture, state, canvas, stage, editor, aim, pickItem, invalidate, announce, W, L, lightOf,
   track: loading.track,
   setEdit: (on) => setEdit(on),
   setFurniture: (on) => state.furniture !== on && setFurniture(on), // the None preset, and back
@@ -825,9 +846,9 @@ function updateSun() {
   const day = new Date(Date.UTC(new Date().getFullYear(), Number(sunMonth.value), 21, 12));
   const hours = Number(sunTime.value);
   const { azimuth, elevation } = sunPosition(zurichTime(Math.floor(hours), Math.round((hours % 1) * 60), day), ROOM.site.lat, ROOM.site.lon);
-  const lampWasOn = lighting.lampOn;
+  const lightsWere = lighting.lightsKey;
   lighting.setSun(surroundings.direction(azimuth, elevation));
-  if (lighting.lampOn !== lampWasOn) renderEditor(); // the ceiling light's card says what it does now
+  if (lighting.lightsKey !== lightsWere) renderEditor(); // a light's card says what it does now
   syncCasters();
   traceNeighbours();
   const hh = String(Math.floor(hours)).padStart(2, '0'), mm = String(Math.round((hours % 1) * 60)).padStart(2, '0');

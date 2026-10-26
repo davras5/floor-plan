@@ -15,7 +15,8 @@ export function buildPendant(R) {
   const group = new THREE.Group();
   group.name = 'pendant';
 
-  // Opal glass: soft white by day; glows warm when the lamp is on (lighting.js drives emissive).
+  // Opal glass: soft white by day; glows with the bulb's light when the lamp is on (lighting.js
+  // drives emissive and its colour).
   const glass = new THREE.MeshPhysicalMaterial({
     color: 0xf6f5f1, roughness: 0.45, clearcoat: 0.6, clearcoatRoughness: 0.25,
     emissive: 0xffdcb0, emissiveIntensity: 0,

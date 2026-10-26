@@ -84,9 +84,10 @@ function framed({ sheet: [sw, sh], image: [iw, ih] }, { face: f, depth: d, overl
       const v = [o0, o1, i1, i0].map((p) => frame.v([p[0], p[1], z], [0, 0, nz], uv(p)));
       frame.quad(...v);
     }
-    // Outer and inner sides (u across the depth).
-    for (const [a, b, n] of [[o0, o1, out], [i0, i1, [-out[0], -out[1]]]]) {
-      const v = [[a, 0], [b, 0], [b, d], [a, d]].map(([p, z]) => frame.v([p[0], p[1], z], [n[0], n[1], 0], [z, along(p)]));
+    // Outer and inner sides (u across the depth). The inner side (the rebate's edge, a sliver at a
+    // distance) is shaded as if eased toward the front, so it reads as a soft line, not a dashed one.
+    for (const [a, b, n] of [[o0, o1, [out[0], out[1], 0]], [i0, i1, [-out[0], -out[1], 1]]]) {
+      const v = [[a, 0], [b, 0], [b, d], [a, d]].map(([p, z]) => frame.v([p[0], p[1], z], n, [z, along(p)]));
       frame.quad(...v);
     }
   }

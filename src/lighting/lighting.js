@@ -15,8 +15,9 @@ import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUnifo
 // `key` and `maxExposure` set the metered exposure, like a camera's: a night interior is
 // shown darker than a day one, as the eye sees it.
 //
-// The pendant is about a tenth of the daylight in the room at noon (some 100 lux under it,
-// against about 1,000 lux of daylight indoors), so switching it on by day changes little. At
+// The pendant has a fairly bright bulb: about a sixth of the daylight in the room at noon (some
+// 170 lux under it, against about 1,000 lux of daylight indoors), so switching it on by day
+// changes little. At
 // night it's the main light: everything that's lit at night (the sky, the window openings, the
 // shade's glow) is set against it, and the metered exposure goes up to see it, as eyes adapt.
 // NIGHT_K is that ratio, so the night look is tuned in the lamp's own terms.
@@ -31,7 +32,14 @@ const NIGHT = {
   sky: { top: 0x161d36, horizon: 0xc98559, bottom: 0x23211f },
 };
 // The pendant, when it's on: its light and the glow of its shade.
-const LAMP = { intensity: 6 * NIGHT_K, glow: 1.4 * NIGHT_K };
+const LAMP = { intensity: 10 * NIGHT_K, glow: 2.3 * NIGHT_K };
+// The bulbs' colour: neutral white LEDs, about 4500 K (the room's real bulbs; the white balance
+// keeps a little of their warmth at night).
+const BULB = 0xffdabb;
+// A floor lamp's heads (piece-lights.js; the Post's two), each a small shaded spot: about a fifth
+// of the pendant's light, aimed. Its opal diffusers glow brighter than the pendant's big shade.
+// Each lamp has its own switch: on after sunset, or on / off by hand from its card.
+const PIECE = { intensity: 2 * NIGHT_K, glow: 8 * NIGHT_K };
 // Switched on automatically when daylight drops below this (the sun about 1° above the horizon).
 const LAMP_AUTO_ON = 0.6;
 
@@ -84,6 +92,7 @@ export function createLighting(scene, R, layout, skyUniforms, pendant) {
     sun.shadow.bias = -0.002 / (cam.far - cam.near);
   }
   let lampMode = 'auto'; // 'auto' (on when it's dark), or switched 'on' / 'off' by hand
+  let pieces = []; // lights that come with furniture: the floor lamps (setPieceLights)
   let sunStrength = 1; // direct sun: fades out as the sun nears the horizon
   let daylight = 1; // sky light: fades through twilight, down to 6° below the horizon
 
@@ -100,7 +109,7 @@ export function createLighting(scene, R, layout, skyUniforms, pendant) {
     return light;
   });
 
-  const lamp = new THREE.PointLight(0xffc489, 1, 0, 2);
+  const lamp = new THREE.PointLight(BULB, 1, 0, 2);
   lamp.position.copy(pendant.lightPosition);
   lamp.castShadow = true;
   // A point light's shadow is a cube unrolled to 4 × 2 tiles: 512 → 2048 × 1024 (16 MB with
@@ -131,13 +140,21 @@ export function createLighting(scene, R, layout, skyUniforms, pendant) {
     apply();
   }
   const lampOn = () => (lampMode === 'auto' ? daylight < LAMP_AUTO_ON : lampMode === 'on');
+  // Each floor lamp has its own switch, the same way (piece id → mode; automatic until set).
+  const pieceModes = new Map();
+  const pieceMode = (id) => pieceModes.get(id) ?? 'auto';
+  const pieceOn = (id) => (pieceMode(id) === 'auto' ? daylight < LAMP_AUTO_ON : pieceMode(id) === 'on');
+  function setPieceLamp(id, mode) {
+    pieceModes.set(id, mode);
+    apply();
+  }
 
   // Daylight follows the sun: after sunset the sky light and the sky itself fade toward dusk.
   // White balance, like a camera's: a per-channel gain on every light source (sun, openings,
   // lamp, glowing shade, sky). Rendering is linear in the lights, so this is the same as
   // balancing the image, and the room's light capture picks it up too.
   const balance = new THREE.Color(1, 1, 1);
-  const sunBase = new THREE.Color(), lampBase = new THREE.Color(0xffc489), glowBase = pendant.glass.emissive.clone();
+  const sunBase = new THREE.Color(), lampBase = new THREE.Color(BULB), glowBase = new THREE.Color(BULB);
 
   const c = new THREE.Color(), d = new THREE.Color();
   function apply() {
@@ -158,6 +175,19 @@ export function createLighting(scene, R, layout, skyUniforms, pendant) {
     lamp.intensity = on ? LAMP.intensity : 0;
     lamp.visible = on;
     lamp.color.copy(lampBase).multiply(balance);
+    // The floor lamps, each by its own switch (if it's in the room).
+    for (const p of pieces) {
+      const lit = p.present() && pieceOn(p.id);
+      for (const light of p.lights) {
+        light.visible = lit;
+        light.intensity = lit ? PIECE.intensity : 0;
+        light.color.copy(lampBase).multiply(balance);
+      }
+      for (const m of p.glow()) {
+        m.emissive.copy(lampBase).multiply(balance);
+        m.emissiveIntensity = lit ? PIECE.glow : 0;
+      }
+    }
     pendant.glass.emissive.copy(glowBase).multiply(balance);
     pendant.glass.emissiveIntensity = on ? LAMP.glow : 0;
     scene.environmentIntensity = p.env;
@@ -213,19 +243,29 @@ export function createLighting(scene, R, layout, skyUniforms, pendant) {
 
   // Until the real sun is known, light comes in through the window wall from above and to one side.
   setSun(new THREE.Vector3(-2.4, 4.6, -7.0).normalize());
-  // Runs fn with the lamp switched on (for compiling its shaders ahead of time), then puts it back.
+  // Runs fn with the lamp (and the floor lamps in the room) switched on, for compiling their
+  // shaders ahead of time, then puts them back.
   function withLamp(fn) {
-    const was = lamp.visible;
-    lamp.visible = true;
+    const lights = [lamp, ...pieces.filter((p) => p.present()).flatMap((p) => p.lights)];
+    const was = lights.map((l) => l.visible);
+    for (const l of lights) l.visible = true;
     try {
       fn();
     } finally {
-      lamp.visible = was;
+      lights.forEach((l, i) => (l.visible = was[i]));
     }
   }
 
+  // The lights that come with furniture (piece-lights.js), whenever the furniture changes.
+  function setPieceLights(list) {
+    pieces = list;
+    apply();
+  }
+
   return {
-    setSun, setLamp, exposureFor, whiteBalance, withLamp, setShadowSizes, balance, sun, lamp,
+    setSun, setLamp, exposureFor, whiteBalance, withLamp, setShadowSizes, setPieceLights, setPieceLamp, balance, sun, lamp,
+    pieceLampOn: pieceOn,
+    pieceLampMode: pieceMode,
     get sunUp() {
       return sun.intensity > 0;
     },
@@ -234,6 +274,10 @@ export function createLighting(scene, R, layout, skyUniforms, pendant) {
     },
     get lampMode() {
       return lampMode;
+    },
+    // Which lights are on now, as one string: a change means a card may need redrawing.
+    get lightsKey() {
+      return [lampOn(), ...pieces.map((p) => pieceOn(p.id))].join();
     },
   };
 }

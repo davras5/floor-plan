@@ -167,10 +167,12 @@ src/ui/                    accessibility.js (keyboard 3D view, room in words, fo
 assets/catalog/            products.json, presets.json and their schemas (docs/catalog.md)
 assets/furniture/          web-ready models, finishes (options.json) and swatches
 assets/plants/             the plants (GLB) and where they come from (info.json)
+assets/art/                the framed prints: frame models (GLB), print images, options.json
 assets/surroundings/       processed swisstopo data
 assets/incoming/           drop folder for new downloads (not published, not in git)
 scripts/                   serve.mjs (dev server), smoke.mjs and check-catalog.mjs (npm test),
-                           compact-obj.mjs, surroundings.py, build-artifact.mjs, plants/
+                           compact-obj.mjs, surroundings.py, build-artifact.mjs, plants/,
+                           art/frames.mjs (the print frames)
 docs/                      catalog.md, code-review.md, performance-review.md, design-review.md,
                            photos/ (the reference photos)
 raw/                       not in git: manufacturer downloads (raw/downloads/) and swisstopo
@@ -208,6 +210,20 @@ A first visit starts with the **Outline 2-seater + pouf, Steelcut 220** preset (
   a zebra haworthia in a white glazed pot (Poly Haven, CC0) at x 0.98 m, a young rubber plant in a
   terracotta pot at 1.55 m and a snake plant in a charcoal pot at 2.10 m, both made for this planner
   (CC0, `scripts/plants/`). They stay where they are in Edit; **Remove** takes one out.
+- **Two framed art prints**, both late Lake Geneva landscapes by Ferdinand Hodler (public domain),
+  sold as giclée prints on cotton paper by the Fondation Beyeler's shop (CHF, delivered in
+  Switzerland):
+  - over the sofa, *Le Grammont après la pluie* (1917), sheet 60 × 80 cm, 83 × 63 cm framed: its
+    bottom edge 1.05 m up (25 cm above the Outline's back), centred on the sofa;
+  - over the dining table, *Le Mont Blanc aux nuages roses* (1918), sheet 50 × 70 cm, 73 × 53 cm
+    framed, centred on the table, its middle at 1.49 m.
+
+  **Frame** under Finish: white wood (the Beyeler's own frames, collected at the museum), oak
+  or black (boesner Quadro for the 60 × 80; Moebe Frame, posted by Connox, for the 50 × 70), with
+  the frame's price added to the print's. The card names the shop for each, and **Model** hangs
+  the other print instead. They stay where they are in Edit; **Remove** takes one off the wall.
+  The models are made by `scripts/art/frames.mjs`; the images and their licence are in
+  [THIRD_PARTY.md](../THIRD_PARTY.md).
 - **The existing pendant**, traced from the photos and hung from the ceiling outlet (one of the
   room's fittings, see Views and controls).
 

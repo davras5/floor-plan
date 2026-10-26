@@ -102,6 +102,14 @@
       "optional": true,
       "movable": false,
       "place": {"x": 1.25, "door": 0.002, "y": 1.22, "rotation": 180}
+    },
+    {
+      "id": "floor-lamp",
+      "label": "Floor lamp",
+      "product": "muuto-post-floor-lamp",
+      "optional": true,
+      "present": false,
+      "place": {"left": 0.02, "z": 2.4, "rotation": 90}
     }
   ],
   "presets": [
@@ -110,7 +118,7 @@
       "maker": "Muuto",
       "name": "Outline 2-seater + pouf, Steelcut 220",
       "summary": "Aluminium legs · oak side table · white chairs",
-      "note": "Outline Soft 2-seater and pouf in off-white Steelcut 220 on polished aluminium legs, an oak Soft Side Table on its pale grey base, white shells on oak, warm grey linoleum table on oak",
+      "note": "Outline Soft 2-seater and pouf in off-white Steelcut 220 on polished aluminium legs, an oak Soft Side Table on its pale grey base, white shells on oak, warm grey linoleum table on oak, a black Post floor lamp by the sofa; two Hodler prints in white frames",
       "pieces": {
         "sofa": {
           "product": "muuto-outline-soft-2-seater",
@@ -132,8 +140,9 @@
         "sill-haworthia": {"present": true},
         "sill-rubber-plant": {"present": true},
         "sill-snake-plant": {"present": true},
-        "sofa-picture": {"product": "beyeler-hodler-grammont-60x80", "present": true, "place": {"left": 0.002, "z": 1.3, "y": 1.05, "rotation": 90}},
-        "table-picture": {"product": "beyeler-hodler-mont-blanc-50x70", "present": true}
+        "sofa-picture": {"product": "beyeler-hodler-grammont-60x80", "present": true, "choices": {"frame": "white"}, "place": {"left": 0.002, "z": 1.3, "y": 1.05, "rotation": 90}},
+        "table-picture": {"product": "beyeler-hodler-mont-blanc-50x70", "present": true, "choices": {"frame": "white"}},
+        "floor-lamp": {"present": true, "place": {"left": 0.02, "z": 2.4, "rotation": 90}}
       }
     },
     {
@@ -141,7 +150,7 @@
       "maker": "Muuto",
       "name": "Outline 2-seater + pouf, Clay 12",
       "summary": "Aluminium legs · grey side table · white chairs",
-      "note": "Outline Soft 2-seater and pouf in Clay 12 on polished aluminium legs: an L with a movable foot end, and an all-grey Soft Side Table in linoleum",
+      "note": "Outline Soft 2-seater and pouf in Clay 12 on polished aluminium legs: an L with a movable foot end, and an all-grey Soft Side Table in linoleum; two Hodler prints in white frames",
       "pieces": {
         "sofa": {
           "product": "muuto-outline-soft-2-seater",
@@ -163,8 +172,9 @@
         "sill-haworthia": {"present": true},
         "sill-rubber-plant": {"present": true},
         "sill-snake-plant": {"present": true},
-        "sofa-picture": {"product": "beyeler-hodler-grammont-60x80", "present": true, "place": {"left": 0.002, "z": 1.3, "y": 1.05, "rotation": 90}},
-        "table-picture": {"product": "beyeler-hodler-mont-blanc-50x70", "present": true}
+        "sofa-picture": {"product": "beyeler-hodler-grammont-60x80", "present": true, "choices": {"frame": "white"}, "place": {"left": 0.002, "z": 1.3, "y": 1.05, "rotation": 90}},
+        "table-picture": {"product": "beyeler-hodler-mont-blanc-50x70", "present": true, "choices": {"frame": "white"}},
+        "floor-lamp": {"present": false}
       }
     },
     {
@@ -172,7 +182,7 @@
       "maker": "Muuto",
       "name": "Outline 2-seater, Steelcut 220",
       "summary": "Aluminium legs · oak side table · white chairs",
-      "note": "Outline Soft 2-seater in off-white Steelcut 220 on polished aluminium legs, without the pouf; the oak Soft Side Table on its grey base stands in front of the window-end seat. White shells on oak, warm grey linoleum table on oak",
+      "note": "Outline Soft 2-seater in off-white Steelcut 220 on polished aluminium legs, without the pouf; the oak Soft Side Table on its grey base stands in front of the window-end seat. White shells on oak, warm grey linoleum table on oak, a black Post floor lamp by the sofa; two Hodler prints in white frames",
       "pieces": {
         "sofa": {
           "product": "muuto-outline-soft-2-seater",
@@ -194,8 +204,9 @@
         "sill-haworthia": {"present": true},
         "sill-rubber-plant": {"present": true},
         "sill-snake-plant": {"present": true},
-        "sofa-picture": {"product": "beyeler-hodler-grammont-60x80", "present": true, "place": {"left": 0.002, "z": 1.0, "y": 1.05, "rotation": 90}},
-        "table-picture": {"product": "beyeler-hodler-mont-blanc-50x70", "present": true}
+        "sofa-picture": {"product": "beyeler-hodler-grammont-60x80", "present": true, "choices": {"frame": "white"}, "place": {"left": 0.002, "z": 1.0, "y": 1.05, "rotation": 90}},
+        "table-picture": {"product": "beyeler-hodler-mont-blanc-50x70", "present": true, "choices": {"frame": "white"}},
+        "floor-lamp": {"present": true, "place": {"left": 0.02, "z": 2.1, "rotation": 90}}
       }
     },
     {
@@ -203,7 +214,7 @@
       "maker": "Muuto",
       "name": "In Situ 2-seater with chaise, Clay 12",
       "summary": "Black frame · oak side table · white chairs",
-      "note": "In Situ in Clay 12 with its black frame, an oak Soft Side Table on its pale grey base, white shells on oak, warm grey linoleum table",
+      "note": "In Situ in Clay 12 with its black frame, an oak Soft Side Table on its pale grey base, white shells on oak, warm grey linoleum table, a black Post floor lamp; two Hodler prints in black frames",
       "pieces": {
         "sofa": {
           "product": "muuto-in-situ-2-seater-7",
@@ -225,8 +236,9 @@
         "sill-haworthia": {"present": true},
         "sill-rubber-plant": {"present": true},
         "sill-snake-plant": {"present": true},
-        "sofa-picture": {"product": "beyeler-hodler-grammont-60x80", "present": true, "place": {"left": 0.002, "z": 1.23, "y": 1.05, "rotation": 90}},
-        "table-picture": {"product": "beyeler-hodler-mont-blanc-50x70", "present": true}
+        "sofa-picture": {"product": "beyeler-hodler-grammont-60x80", "present": true, "choices": {"frame": "black"}, "place": {"left": 0.002, "z": 1.23, "y": 1.05, "rotation": 90}},
+        "table-picture": {"product": "beyeler-hodler-mont-blanc-50x70", "present": true, "choices": {"frame": "black"}},
+        "floor-lamp": {"present": true, "place": {"left": 0.02, "z": 2.51, "rotation": 90}}
       }
     },
     {
@@ -234,7 +246,7 @@
       "maker": "Muuto",
       "name": "In Situ 2-seater with chaise, Ecriture 210",
       "summary": "Black frame · beige green side table · ochre chairs",
-      "note": "In Situ in sandy Ecriture 210, a beige green Soft Side Table, ochre shells on oak, warm grey linoleum table",
+      "note": "In Situ in sandy Ecriture 210, a beige green Soft Side Table, ochre shells on oak, warm grey linoleum table, a brown green Post floor lamp; two Hodler prints in oak frames",
       "pieces": {
         "sofa": {
           "product": "muuto-in-situ-2-seater-7",
@@ -256,8 +268,9 @@
         "sill-haworthia": {"present": true},
         "sill-rubber-plant": {"present": true},
         "sill-snake-plant": {"present": true},
-        "sofa-picture": {"product": "beyeler-hodler-grammont-60x80", "present": true, "place": {"left": 0.002, "z": 1.23, "y": 1.05, "rotation": 90}},
-        "table-picture": {"product": "beyeler-hodler-mont-blanc-50x70", "present": true}
+        "sofa-picture": {"product": "beyeler-hodler-grammont-60x80", "present": true, "choices": {"frame": "oak"}, "place": {"left": 0.002, "z": 1.23, "y": 1.05, "rotation": 90}},
+        "table-picture": {"product": "beyeler-hodler-mont-blanc-50x70", "present": true, "choices": {"frame": "oak"}},
+        "floor-lamp": {"present": true, "choices": {"color": "02"}, "place": {"left": 0.02, "z": 2.51, "rotation": 90}}
       }
     }
   ]

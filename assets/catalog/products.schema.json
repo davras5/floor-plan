@@ -111,6 +111,30 @@
         "model": {
           "$ref": "#/$defs/model"
         },
+        "lights": {
+          "description": "The light a lamp gives (src/lighting/piece-lights.js): spotlights at its heads, in the piece's own coordinates (metres, from its footprint's centre on the floor), and the part that glows when it's on. How bright is set in lighting.js, with the room's other lights.",
+          "type": "object",
+          "required": ["spots"],
+          "additionalProperties": false,
+          "properties": {
+            "glow": { "type": "string", "description": "Part id of the diffuser that glows." },
+            "angle": { "type": "number", "description": "Spotlight cone, full angle in degrees." },
+            "penumbra": { "type": "number", "minimum": 0, "maximum": 1 },
+            "spots": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "required": ["position", "direction"],
+                "additionalProperties": false,
+                "properties": {
+                  "position": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3 },
+                  "direction": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3 }
+                }
+              }
+            }
+          }
+        },
         "footprint": {
           "description": "What stands on the floor, when it's smaller than the whole model (a plant's pot under its crown): used for placing, walls and collisions. The model's own origin is then the footprint's centre.",
           "type": "object",
