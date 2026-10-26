@@ -1,0 +1,13 @@
+{
+  "name": "living-room",
+  "private": true,
+  "type": "module",
+  "description": "Interactive three.js model of the living room, for trying out furniture.",
+  "scripts": {
+    "start": "node scripts/serve.mjs",
+    "test": "node scripts/check-catalog.mjs && node scripts/smoke.mjs",
+    "surroundings": "python -I scripts/surroundings.py",
+    "build:artifact": "node scripts/build-artifact.mjs",
+    "check:catalog": "node scripts/check-catalog.mjs"
+  }
+}

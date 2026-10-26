@@ -1,0 +1,185 @@
+{
+  "name": "Rubber plant (Ficus elastica), young, three cuttings in a clay pot",
+  "file": "model.glb",
+  "bytes": 88888,
+  "source": {
+    "kind": "procedural",
+    "script": "scripts/plants/rubber-plant.mjs (seed 5, uses lib.mjs), then scripts/plants/pack.mjs",
+    "url": null,
+    "author": "Generated for this project (no third-party content)",
+    "licence": "CC0 1.0"
+  },
+  "units": "metres, Y up, origin at the centre of the pot's base (on the floor)",
+  "triangles": 4487,
+  "size": {
+    "width": 0.323,
+    "depth": 0.21,
+    "height": 0.364,
+    "note": "W = x, D = z, H = y, metres"
+  },
+  "bounds": {
+    "min": [
+      -0.189,
+      0,
+      -0.105
+    ],
+    "max": [
+      0.134,
+      0.364,
+      0.105
+    ]
+  },
+  "footprint": {
+    "width": 0.132,
+    "depth": 0.132,
+    "height": 0.118,
+    "note": "the pot alone (W = x, D = z)"
+  },
+  "parts": [
+    {
+      "node": "pot",
+      "triangles": 1104,
+      "material": "rubber_pot",
+      "min": [
+        -0.066,
+        0,
+        -0.066
+      ],
+      "max": [
+        0.066,
+        0.118,
+        0.066
+      ]
+    },
+    {
+      "node": "soil",
+      "triangles": 324,
+      "material": "rubber_soil",
+      "min": [
+        -0.058,
+        0.103,
+        -0.058
+      ],
+      "max": [
+        0.058,
+        0.108,
+        0.058
+      ]
+    },
+    {
+      "node": "stems",
+      "triangles": 851,
+      "material": "rubber_stems",
+      "min": [
+        -0.066,
+        0.088,
+        -0.015
+      ],
+      "max": [
+        0.057,
+        0.331,
+        0.022
+      ]
+    },
+    {
+      "node": "leaves",
+      "triangles": 2208,
+      "material": "rubber_leaves",
+      "min": [
+        -0.189,
+        0.129,
+        -0.105
+      ],
+      "max": [
+        0.134,
+        0.364,
+        0.105
+      ]
+    }
+  ],
+  "materials": [
+    {
+      "name": "rubber_pot",
+      "role": "pot: plain colour, recolourable",
+      "alphaMode": "OPAQUE",
+      "doubleSided": false,
+      "baseColorFactor": "#b5694a",
+      "roughnessFactor": 0.9,
+      "metallicFactor": 0,
+      "three": "MeshStandardMaterial",
+      "vertexColors": false,
+      "textures": {}
+    },
+    {
+      "name": "rubber_soil",
+      "role": "soil: vertex colours",
+      "alphaMode": "OPAQUE",
+      "doubleSided": false,
+      "baseColorFactor": "#ffffff",
+      "roughnessFactor": 1,
+      "metallicFactor": 0,
+      "three": "MeshStandardMaterial",
+      "vertexColors": true,
+      "textures": {}
+    },
+    {
+      "name": "rubber_stems",
+      "role": "stems, leaf stalks and the red leaf sheaths: vertex colours",
+      "alphaMode": "OPAQUE",
+      "doubleSided": false,
+      "baseColorFactor": "#ffffff",
+      "roughnessFactor": 0.7,
+      "metallicFactor": 0,
+      "three": "MeshStandardMaterial",
+      "vertexColors": true,
+      "textures": {}
+    },
+    {
+      "name": "rubber_leaves",
+      "role": "leaves: opaque geometry cut to the leaf outline (no alpha), double-sided. KHR_materials_specular (specularFactor 0.6) makes three.js load it as a MeshPhysicalMaterial",
+      "alphaMode": "OPAQUE",
+      "doubleSided": true,
+      "baseColorFactor": "#ffffff",
+      "roughnessFactor": 0.42,
+      "metallicFactor": 0,
+      "specularFactor": 0.6,
+      "three": "MeshPhysicalMaterial",
+      "vertexColors": true,
+      "textures": {
+        "baseColor": {
+          "image": "rubber_leaf_colour.webp",
+          "format": "image/webp",
+          "size": "512×1024",
+          "kb": 14
+        },
+        "normal": {
+          "image": "rubber_leaf_normal.webp",
+          "format": "image/webp",
+          "size": "512×1024",
+          "kb": 24
+        }
+      }
+    }
+  ],
+  "pot": {
+    "recolourable": true,
+    "how": "material rubber_pot has no texture and no vertex colours: set its color",
+    "current": "#b5694a",
+    "suggested": {
+      "default": "#b5694a (terracotta)",
+      "alternatives": [
+        "#d6cdc1 (warm sand)",
+        "#ece9e3 (off-white)",
+        "#3b3a37 (charcoal)"
+      ]
+    }
+  },
+  "gltf": {
+    "extensionsRequired": [
+      "EXT_texture_webp",
+      "KHR_mesh_quantization",
+      "EXT_meshopt_compression"
+    ],
+    "loader": "GLTFLoader with setMeshoptDecoder(MeshoptDecoder) from three/addons/libs/meshopt_decoder.module.js; WebP textures and quantized geometry need nothing else in three r170"
+  }
+}

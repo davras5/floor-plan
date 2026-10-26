@@ -1,0 +1,308 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "products.schema.json",
+  "title": "Product catalog",
+  "description": "Every product the planner can put in the room, in one shape: what it is (maker, name, page, listed size), its 3D model and how the model is split into finishable parts, and where its configuration options are. The options themselves (every finish the maker sells, with codes and prices) are in one file per product, because they are long (up to 1,005 upholstery colours).",
+  "type": "object",
+  "required": [
+    "products"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "partSets": {
+      "description": "Part lists shared by several products (the Outline sofas and pouf), referred to by name from model.parts.",
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/parts"
+      }
+    },
+    "products": {
+      "description": "Keyed by product id: maker-product-variant, lower case, e.g. muuto-workshop-table-130x65. Looks and pieces refer to products by this id.",
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/product"
+      }
+    }
+  },
+  "$defs": {
+    "product": {
+      "type": "object",
+      "required": [
+        "maker",
+        "name",
+        "category",
+        "size",
+        "model"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "maker": {
+          "type": "string",
+          "description": "Who makes or published it, e.g. Muuto."
+        },
+        "name": {
+          "type": "string",
+          "description": "The product's own name, with the size or configuration where the maker sells several."
+        },
+        "category": {
+          "enum": [
+            "sofa",
+            "pouf",
+            "dining-table",
+            "chair",
+            "side-table",
+            "plant",
+            "lamp"
+          ]
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "The product's page on the maker's site (or the model's page, for models that aren't a product)."
+        },
+        "itemUrl": {
+          "type": "string",
+          "pattern": "\\{item\\}",
+          "description": "The page of one configuration: {item} is replaced by the configured item number (from the options file's `item` pattern), and {<group>} by that option group's code. The info card's shop link goes there."
+        },
+        "size": {
+          "$ref": "#/$defs/size"
+        },
+        "finish": {
+          "type": "string",
+          "description": "The default finish in words, shown until the options have loaded (or if they can't)."
+        },
+        "options": {
+          "type": "string",
+          "description": "Path of the product's options file, from the site root. Products without one have a single fixed finish."
+        },
+        "source": {
+          "description": "Where the 3D model comes from, when that isn't the maker: a CC0 plant from Poly Haven, or one made for this project (`url` left out).",
+          "type": "object",
+          "required": [
+            "licence"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "author": {
+              "type": "string"
+            },
+            "licence": {
+              "type": "string"
+            }
+          }
+        },
+        "model": {
+          "$ref": "#/$defs/model"
+        },
+        "footprint": {
+          "description": "What stands on the floor, when it's smaller than the whole model (a plant's pot under its crown): used for placing, walls and collisions. The model's own origin is then the footprint's centre.",
+          "type": "object",
+          "required": [
+            "width",
+            "depth"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "width": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "depth": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            }
+          }
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "url"
+          ]
+        },
+        {
+          "required": [
+            "source"
+          ]
+        }
+      ]
+    },
+    "size": {
+      "description": "The maker's listed size in metres (the room uses the model's own bounding box, which can differ by a few cm).",
+      "type": "object",
+      "required": [
+        "width",
+        "depth",
+        "height"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "width": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "depth": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "height": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      }
+    },
+    "modelFile": {
+      "type": "object",
+      "required": [
+        "file"
+      ],
+      "properties": {
+        "file": {
+          "type": "string",
+          "pattern": "\\.(obj|glb)$",
+          "description": "Path from the site root. OBJ files are split into parts by group name; GLB files keep their own materials unless parts are given."
+        },
+        "scale": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "default": 1,
+          "description": "Model units to metres, e.g. 0.001 for millimetres."
+        },
+        "parts": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/parts"
+            },
+            {
+              "type": "string",
+              "description": "The name of a list in partSets."
+            }
+          ]
+        }
+      }
+    },
+    "model": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/modelFile"
+        }
+      ],
+      "type": "object",
+      "properties": {
+        "file": true,
+        "scale": true,
+        "parts": true,
+        "variants": {
+          "description": "Other models of the same product that an option switches to (an option's `model`), e.g. the Outline on castors, or another size.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/modelFile"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "parts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/part"
+      }
+    },
+    "part": {
+      "type": "object",
+      "required": [
+        "id",
+        "match",
+        "material"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "What the options file's groups refer to in their `parts`."
+        },
+        "match": {
+          "type": "string",
+          "description": "A regular expression for the model's group (or mesh) names that make up this part."
+        },
+        "uvPerM": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "How many of the model's texture-coordinate units make a metre, so wood and fabric come out at their real scale."
+        },
+        "planarUV": {
+          "enum": [
+            "xy",
+            "xz",
+            "yz",
+            "zx",
+            "zy",
+            "yx"
+          ],
+          "description": "Make texture coordinates from the positions (for parts that have none)."
+        },
+        "boxUV": {
+          "type": "boolean",
+          "description": "Make texture coordinates by box projection, so fabric has one scale across every panel."
+        },
+        "rotate": {
+          "type": "number",
+          "description": "Turn textures on this part by this many degrees (wood grain direction)."
+        },
+        "material": {
+          "$ref": "#/$defs/material"
+        }
+      }
+    },
+    "material": {
+      "description": "The part's fallback look, used until the options have loaded: a plain colour, an upholstery photo (fabric), or a texture photo such as wood.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "color": {
+          "type": "string",
+          "pattern": "^#[0-9a-f]{6}$"
+        },
+        "roughness": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "metalness": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "fabric": {
+          "type": "string"
+        },
+        "tileMm": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "texture": {
+          "type": "string"
+        },
+        "tile": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "rotate": {
+          "type": "number"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,944 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Living Room Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Sans:wght@400;500;600&display=swap">
+<style>
+  /* Layout: full-bleed 3D stage; a compact room card top-left, a control dock along the bottom edge. */
+  :root {
+    --bg: #e3e6e9;
+    --bg-deep: #ccd2d8;
+    --panel: rgba(250, 250, 249, 0.9);
+    --panel-edge: rgba(26, 31, 38, 0.1);
+    --ink: #1b2027;
+    --ink-soft: #5a6470;
+    --accent: #f2c12e; /* the cat poster's yellow */
+    --accent-ink: #1a1a17;
+    --dim-line: #3a4350;
+    --dim-bg: rgba(252, 252, 251, 0.94);
+    --shadow: 0 8px 28px rgba(24, 32, 42, 0.14);
+    /* Labels drawn on the oak floor look the same in both themes. */
+    --floor-tag-ink: #2a1d12;
+    --floor-tag-bg: rgba(255, 252, 246, 0.72);
+    --font-ui: "Instrument Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --font-num: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #171b20; --bg-deep: #0d1013; --panel: rgba(29, 34, 40, 0.9); --panel-edge: rgba(255, 255, 255, 0.09);
+      --ink: #edf0f3; --ink-soft: #9ba5b0; --dim-line: #aeb8c3; --dim-bg: rgba(29, 34, 40, 0.94);
+      --shadow: 0 8px 28px rgba(0, 0, 0, 0.4); color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #171b20; --bg-deep: #0d1013; --panel: rgba(29, 34, 40, 0.9); --panel-edge: rgba(255, 255, 255, 0.09);
+    --ink: #edf0f3; --ink-soft: #9ba5b0; --dim-line: #aeb8c3; --dim-bg: rgba(29, 34, 40, 0.94);
+    --shadow: 0 8px 28px rgba(0, 0, 0, 0.4); color-scheme: dark;
+  }
+
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    overflow: hidden;
+    background: radial-gradient(130% 100% at 50% 35%, var(--bg) 0%, var(--bg-deep) 100%);
+    color: var(--ink);
+    font: 14px/1.4 var(--font-ui);
+    -webkit-font-smoothing: antialiased;
+  }
+  [hidden] { display: none !important; }
+
+  /* Layers, bottom to top. Explicit, because three.js gives each 3D label a z-index from its
+     distance (up to millions): isolating #stage keeps those inside the 3D view, under the UI. */
+  #stage { position: fixed; inset: 0; z-index: 0; isolation: isolate; }
+  #loading { z-index: 5; }
+  .top, .dock { z-index: 10; }
+  .room-text:focus-within { z-index: 30; }
+  #stage canvas { display: block; touch-action: none; }
+  .labels { position: absolute; inset: 0; pointer-events: none; }
+
+  /* Along the top: the room card on the left, the presets on the right. On narrow screens the
+     presets wrap under the card, still on the right. */
+  .top {
+    position: fixed;
+    top: calc(16px + env(safe-area-inset-top, 0px));
+    left: calc(16px + env(safe-area-inset-left, 0px));
+    right: calc(16px + env(safe-area-inset-right, 0px));
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px 16px;
+    pointer-events: none;
+  }
+  .top > * { pointer-events: auto; }
+  .card {
+    box-sizing: border-box;
+    max-width: min(370px, 100%);
+    padding: 12px 14px 11px;
+    background: var(--panel);
+    border: 1px solid var(--panel-edge);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  .card h1 { margin: 0; font: 600 15px/1.2 var(--font-ui); letter-spacing: -0.005em; text-wrap: balance; }
+  .card .figures { margin: 5px 0 0; font: 500 12px/1.45 var(--font-num); font-variant-numeric: tabular-nums; }
+  .card-head { display: flex; align-items: flex-start; gap: 8px; }
+  .card-titles { flex: 1; min-width: 0; }
+  /* Collapses the card to its title line (automatic on small screens and while editing there). */
+  .card-toggle {
+    flex: none;
+    position: relative;
+    width: 30px;
+    height: 30px;
+    margin: -5px -7px 0 0;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--ink-soft);
+    cursor: pointer;
+  }
+  .card-toggle:hover { background: var(--panel-edge); color: var(--ink); }
+  .card-toggle::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 7px;
+    height: 7px;
+    border: solid currentColor;
+    border-width: 0 1.6px 1.6px 0;
+    transform: translate(-50%, -30%) rotate(-135deg);
+  }
+  .card-toggle[aria-expanded="false"]::before { transform: translate(-50%, -70%) rotate(45deg); }
+  .card .figures { overflow-wrap: anywhere; }
+  .sr-only {
+    position: absolute !important;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  /* The 3D view takes keyboard focus (arrow keys orbit/pan, +/− zoom). */
+  #stage canvas:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; }
+  /* The room in words: visually hidden like .sr-only until something in it has keyboard focus,
+     then a panel in the middle of the screen. */
+  .room-text:not(:focus-within) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .room-text:focus-within {
+    position: fixed;
+    z-index: 30; /* see "Layers" at the top */
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: min(520px, calc(100vw - 32px));
+    max-height: calc(100vh - 32px);
+    overflow: auto;
+    padding: 14px 16px;
+    background: var(--panel);
+    border: 1px solid var(--panel-edge);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    color: var(--ink);
+    font-size: 13px;
+  }
+  .room-text h2 { margin: 0 0 6px; font-size: 15px; }
+  .room-text h3 { margin: 12px 0 6px; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
+  .room-text p { margin: 0; color: var(--ink-soft); }
+  .room-text ul { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+  .room-text button {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--panel-edge);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--ink);
+    font: 13px/1.35 var(--font-ui);
+    text-align: left;
+    cursor: pointer;
+  }
+  .room-text button:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .card .note { margin: 6px 0 0; font-size: 12px; line-height: 1.4; color: var(--ink-soft); }
+  .card code { font: 500 11px var(--font-num); color: var(--ink); }
+  .card .sun { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12px; color: var(--ink-soft); }
+  .card .sun label { font-weight: 600; color: var(--ink); }
+  .card .sun input[type="range"] { flex: 1; min-width: 0; height: 24px; margin: 0; accent-color: var(--accent); }
+  .card .sun output { font: 500 12px var(--font-num); font-variant-numeric: tabular-nums; color: var(--ink); min-width: 5.5ch; }
+  .card .sun select { font: 500 12px var(--font-ui); color: var(--ink); background: transparent; border: 1px solid var(--panel-edge); border-radius: 6px; padding: 3px 4px; }
+  .card .sun :focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .card .attribution { font-size: 11px; }
+  .card .attribution a { color: inherit; }
+  .card .attribution a:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+
+  /* Presets: whole-room looks, one tap each (None: the empty room). Folds to
+     "Presets · <current>" like the room card. */
+  .presets { width: 288px; margin-left: auto; padding: 4px; }
+  .presets:has(#presets-toggle[aria-expanded="false"]) { width: auto; }
+  .presets h2 { margin: 0; font: inherit; }
+  #presets-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 7px 10px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--ink);
+    font: 600 13px/1.2 var(--font-ui);
+    text-align: left;
+    cursor: pointer;
+  }
+  #presets-toggle:hover { background: color-mix(in srgb, var(--ink) 6%, transparent); }
+  .presets-current { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; color: var(--ink-soft); }
+  .presets-current::before { content: "·"; content: "·" / ""; margin-right: 8px; }
+  #presets-toggle[aria-expanded="true"] .presets-current { display: none; }
+  /* The same chevron as the room card's. */
+  .presets-chevron {
+    flex: none;
+    width: 7px;
+    height: 7px;
+    margin: 0 4px 0 auto;
+    border: solid var(--ink-soft);
+    border-width: 0 1.6px 1.6px 0;
+    transform: translateY(2px) rotate(-135deg);
+  }
+  #presets-toggle[aria-expanded="false"] .presets-chevron { transform: translateY(-2px) rotate(45deg); }
+  #presets-body { max-height: calc(100vh - 170px); max-height: calc(100dvh - 170px); overflow-y: auto; overscroll-behavior: contain; }
+  .presets-list { display: grid; gap: 2px; margin: 0; padding: 0 0 2px; list-style: none; }
+  .presets-loading { padding: 8px 10px; font-size: 12px; color: var(--ink-soft); }
+  .sel-pop-link { color: inherit; text-underline-offset: 2px; }
+  .sel-pop-link:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; border-radius: 2px; }
+  .preset {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 7px 10px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .preset:hover { background: color-mix(in srgb, var(--ink) 6%, transparent); }
+  .preset[aria-pressed="true"] { background: color-mix(in srgb, var(--accent) 24%, transparent); }
+  .preset:disabled { opacity: 0.5; cursor: default; }
+  .preset:disabled:hover { background: transparent; }
+  #presets-toggle:focus-visible, .preset:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }
+  /* The look's colours: sofa, chair shell, wood, table top. */
+  .preset-dots { flex: none; display: flex; width: 44px; }
+  .preset-dots span {
+    flex: none;
+    box-sizing: border-box;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 1px solid color-mix(in srgb, var(--ink) 22%, transparent);
+    box-shadow: 0 0 0 1.5px var(--panel);
+  }
+  .preset-dots span + span { margin-left: -4px; }
+  .preset-dots .preset-empty { background: transparent; border-style: dashed; box-shadow: none; }
+  .preset-text { display: grid; flex: 1; min-width: 0; }
+  .preset-name { font: 600 13px/1.25 var(--font-ui); }
+  .preset-sum { font-size: 11.5px; line-height: 1.3; color: var(--ink-soft); }
+  /* The chosen look shows a check as well as the tint (not colour alone). */
+  .preset::after {
+    content: "";
+    flex: none;
+    width: 8px;
+    height: 4px;
+    margin: 0 2px 3px 0;
+    border: solid var(--ink);
+    border-width: 0 0 2px 2px;
+    transform: rotate(-45deg);
+    visibility: hidden;
+  }
+  .preset[aria-pressed="true"]::after { visibility: visible; }
+
+  .dock {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    pointer-events: none;
+  }
+  .dock > * { pointer-events: auto; }
+  .dock > .sr-only { pointer-events: none; }
+  .status { flex-basis: 100%; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; pointer-events: none; }
+  .status > div {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px 12px;
+    max-width: 100%;
+    padding: 6px 12px;
+    background: var(--panel);
+    border: 1px solid var(--panel-edge);
+    border-radius: 8px;
+    font-size: 12px;
+    color: var(--ink-soft);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  #readout.live { font: 500 12px var(--font-num); font-variant-numeric: tabular-nums; }
+  /* Short screens keep the measurement readout, but not the standing "how to" line. */
+  @media (max-height: 520px) { #readout:not(.live) { display: none; } }
+  #readout b { color: var(--ink); font-weight: 600; }
+  #readout .unit { margin-left: -6px; }
+
+  /* Selected furniture: what it is, and what you can do with it. */
+  .status .selection {
+    pointer-events: auto;
+    align-items: center;
+    gap: 8px 16px;
+    max-width: min(880px, 100%);
+    overflow-y: auto; /* main.js sets max-height from the free space between the room card and the dock */
+    overscroll-behavior: contain;
+    padding: 8px 8px 8px 14px;
+    box-shadow: var(--shadow);
+  }
+  .sel-info { min-width: 0; }
+  .ed-item { display: flex; flex-direction: column; gap: 2px; }
+  .ed-idle { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; color: var(--ink-soft); font-size: 12.5px; }
+  .ed-pieces { display: flex; flex-wrap: wrap; gap: 4px; }
+  /* Outlined pill buttons in the edit panel (piece list, actions, finish actions): one style. */
+  .ed-pieces button, .sel-actions button, .ed-finish-actions button {
+    appearance: none;
+    margin: 0;
+    padding: 6px 11px;
+    border: 1px solid var(--panel-edge);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--ink);
+    font: 500 12.5px/1 var(--font-ui);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .ed-pieces button:hover, .sel-actions button:hover, .ed-finish-actions button:hover { border-color: var(--ink-soft); }
+  .ed-pieces button:focus-visible, .sel-actions button:focus-visible, .ed-finish-actions button:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .sel-actions button:disabled, .ed-finish-actions button:disabled { opacity: 0.4; cursor: default; }
+  .sel-actions button:disabled:hover, .ed-finish-actions button:disabled:hover { border-color: var(--panel-edge); }
+  .sel-actions button { padding: 8px 12px; }
+  .ed-finish-actions button { font-size: 12px; }
+  #sel-name { color: var(--ink); font-weight: 600; font-size: 13px; text-decoration: none; }
+  #sel-name:hover { text-decoration: underline; }
+  #sel-name:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; border-radius: 2px; }
+  #sel-size { font: 500 11.5px/1.35 var(--font-num); font-variant-numeric: tabular-nums; color: var(--ink-soft); }
+  .sel-hint { font-size: 11.5px; color: var(--ink-soft); }
+  .sel-hint-touch { display: none; }
+  @media (hover: none) { .sel-hint { display: none; } .sel-hint-touch { display: inline; } }
+  .sel-actions { display: flex; flex-wrap: wrap; gap: 4px; }
+  .sel-actions #sel-done { background: var(--accent); border-color: transparent; color: var(--accent-ink); }
+
+  /* Finish pickers: one row per option group, swatches scroll sideways. */
+  .ed-finish { flex: 1 1 100%; min-width: 0; margin-right: 6px; padding-top: 6px; border-top: 1px solid var(--panel-edge); }
+  .ed-finish > summary {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+    padding: 4px 2px;
+    border-radius: 4px;
+    list-style: none;
+    font-size: 12.5px;
+    cursor: pointer;
+  }
+  .ed-finish > summary::-webkit-details-marker { display: none; }
+  .ed-finish > summary::before {
+    content: "";
+    flex: none;
+    width: 6px;
+    height: 6px;
+    border: solid var(--ink-soft);
+    border-width: 0 1.5px 1.5px 0;
+    transform: translateY(-2px) rotate(-45deg);
+    transition: transform 0.15s;
+  }
+  .ed-finish[open] > summary::before { transform: translateY(-3px) rotate(45deg); }
+  .ed-finish > summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .ed-finish-title { flex: none; font-weight: 600; color: var(--ink); }
+  .ed-finish-sum { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-soft); }
+  .ed-groups { display: grid; gap: 4px; margin-top: 4px; }
+  .ed-group { display: grid; grid-template-columns: 150px minmax(0, 1fr); align-items: center; gap: 2px 12px; }
+  .ed-group-head { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .ed-group-label { font: 600 10px/1.1 var(--font-ui); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
+  .ed-choice { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; color: var(--ink); }
+  .ed-family {
+    max-width: 100%;
+    padding: 4px 6px;
+    border: 1px solid var(--panel-edge);
+    border-radius: 6px;
+    background: var(--dim-bg);
+    color: var(--ink);
+    font: 500 12px/1.2 var(--font-ui);
+  }
+  .ed-family:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .swatches {
+    display: flex;
+    gap: 6px;
+    min-width: 0;
+    padding: 6px 5px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+  }
+  .swatch {
+    flex: none;
+    width: 30px;
+    height: 30px;
+    margin: 0;
+    padding: 0;
+    border: 1px solid color-mix(in srgb, var(--ink) 22%, transparent);
+    border-radius: 50%;
+    background-repeat: no-repeat;
+    cursor: pointer;
+    position: relative;
+  }
+  .swatch:hover { transform: scale(1.08); }
+  .swatch[aria-checked="true"] { box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--ink); }
+  .swatch:focus-visible { outline: 2px dashed var(--ink); outline-offset: 5px; }
+  /* No swatch from Muuto (colour guessed from the name) / not sold in this size. */
+  .swatch-approx::after, .swatch-unsold::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+  }
+  .swatch-approx::after { background: repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.35) 0 2px, transparent 2px 6px); }
+  .swatch-unsold::after { background: linear-gradient(135deg, transparent 43%, rgba(0, 0, 0, 0.55) 43% 46%, rgba(255, 255, 255, 0.92) 46% 54%, rgba(0, 0, 0, 0.55) 54% 57%, transparent 57%); }
+  .ed-finish-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 4px; margin-top: 2px; }
+  .ed-match { display: inline-flex; align-items: center; gap: 6px; margin-right: auto; font-size: 12.5px; color: var(--ink); cursor: pointer; }
+  .ed-match input { width: 15px; height: 15px; margin: 0; accent-color: var(--accent); }
+  .ed-match input:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .ed-model { max-width: 100%; }
+  .ed-pieces .ed-add { border-style: dashed; color: var(--ink-soft); }
+  .sel-pop-note { display: block; margin-top: 2px; font: 400 11px/1.3 var(--font-ui) !important; color: var(--ink-soft); }
+  @media (max-width: 640px) {
+    /* Phones: a bottom sheet. Name and actions first, the finish folded away below; each group
+       is its label and chosen name on one line, its family picker, then the swatch row. */
+    .status .selection { gap: 6px 10px; padding: 8px 8px 8px 12px; }
+    .ed-group { grid-template-columns: minmax(0, 1fr); gap: 0; }
+    .ed-group-head { flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 2px 8px; }
+    .ed-family { flex: 1 1 100%; }
+    .sel-actions { width: 100%; flex-wrap: nowrap; }
+    .sel-actions button { flex: 1 1 auto; padding: 8px 6px; }
+  }
+  /* Touch: finger-sized targets (WCAG 2.5.5); fine pointers keep the compact sizes. */
+  @media (pointer: coarse) {
+    .swatch { width: 40px; height: 40px; }
+    .swatches { gap: 8px; }
+    .sel-actions button, .ed-finish-actions button, .ed-pieces button { min-height: 44px; }
+    .ed-finish > summary { min-height: 40px; align-items: center; }
+    .ed-match { min-height: 44px; }
+    .ed-match input { width: 22px; height: 22px; }
+    .sel-pop-close { width: 44px; height: 44px; margin: -12px -12px 0 auto; }
+    .sel-pop-cta { min-height: 44px; }
+  }
+
+  /* Info card next to the selected piece (furniture.js positions it). */
+  /* Above the dimension labels, whose z-index CSS2DRenderer sets from their distance. */
+  .sel-pop { pointer-events: none; z-index: 100000 !important; }
+  .sel-pop-card {
+    position: absolute;
+    left: 0;
+    top: 0;
+    box-sizing: border-box;
+    width: max-content;
+    max-width: min(300px, calc(100vw - 16px));
+    padding: 10px 12px 11px;
+    background: var(--panel);
+    border: 1px solid var(--panel-edge);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    color: var(--ink);
+    font: 13px/1.35 var(--font-ui);
+    pointer-events: auto;
+    user-select: text;
+  }
+  .sel-pop-head { display: flex; align-items: flex-start; gap: 10px; }
+  .sel-pop-titles { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  .sel-pop-label { font: 600 10px/1.2 var(--font-ui); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
+  .sel-pop-name { color: var(--ink); font-weight: 600; text-decoration: none; text-wrap: balance; }
+  .sel-pop-name:hover { text-decoration: underline; }
+  .sel-pop-name:focus-visible, .sel-pop-close:focus-visible, .sel-pop-cta:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .sel-pop-close {
+    flex: none;
+    width: 26px;
+    height: 26px;
+    margin: -4px -6px 0 auto;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--ink-soft);
+    font: 400 18px/1 var(--font-ui);
+    cursor: pointer;
+  }
+  .sel-pop-close:hover { background: var(--panel-edge); color: var(--ink); }
+  .sel-pop-facts { display: grid; gap: 3px; margin: 8px 0 0; font-size: 12.5px; }
+  .sel-pop-facts > div { display: grid; grid-template-columns: 46px minmax(0, 1fr); gap: 8px; }
+  .sel-pop-facts dt { color: var(--ink-soft); }
+  .sel-pop-facts dd { margin: 0; font-variant-numeric: tabular-nums; }
+  .sel-pop-facts small { color: var(--ink-soft); font: 500 10.5px var(--font-num); }
+  .sel-pop-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+  .sel-pop-actions .sel-pop-cta { margin: 0; }
+  .sel-pop-cta.secondary { background: transparent; border: 1px solid var(--panel-edge); color: var(--ink); }
+  .sel-pop-cta.secondary:hover { border-color: var(--ink-soft); }
+  .sel-pop-cta {
+    margin: 9px 0 0;
+    padding: 7px 12px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    font: 500 12.5px/1 var(--font-ui);
+    cursor: pointer;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .swatch:hover { transform: none; }
+    .ed-finish > summary::before { transition: none; }
+  }
+
+  .group {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 2px;
+    padding: 3px;
+    background: var(--panel);
+    border: 1px solid var(--panel-edge);
+    border-radius: 22px;
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  .group button {
+    appearance: none;
+    border: 0;
+    margin: 0;
+    background: transparent;
+    color: var(--ink-soft);
+    font: 500 13px/1 var(--font-ui);
+    padding: 9px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color 0.15s, color 0.15s;
+  }
+  .group button:hover { color: var(--ink); }
+  .group button:focus-visible, .card-toggle:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+  /* One look per kind of control: the chosen view is filled; Edit (a mode) is filled too;
+     the scene switches show a check when on, so several "on" switches don't read as choices. */
+  .views button[aria-checked="true"], .primary[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+  .switch::before {
+    content: "";
+    display: inline-block;
+    width: 0.55em;
+    height: 0.3em;
+    margin: 0 0.45em 0.18em 0;
+    border: solid currentColor;
+    border-width: 0 0 2px 2px;
+    transform: rotate(-45deg);
+    opacity: 0;
+  }
+  .switch[aria-pressed="true"] { color: var(--ink); background: color-mix(in srgb, var(--accent) 22%, transparent); }
+  .switch[aria-pressed="true"]::before { opacity: 1; }
+  @media (max-width: 420px) {
+    .group button { padding: 9px 9px; font-size: 12.5px; }
+  }
+  /* The narrowest phones: a shorter label, so the toolbar stays one row (its name stays whole). */
+  .label-short { display: none; }
+  @media (max-width: 400px) {
+    .label-long { display: none; }
+    .label-short { display: inline; }
+  }
+  /* Touch: targets of at least 44 px, and 16 px form text so iOS doesn't zoom on focus. */
+  @media (pointer: coarse) {
+    .group button { min-height: 44px; min-width: 44px; }
+    select, input, textarea { font-size: 16px !important; }
+    .card .sun input[type="range"] { height: 44px; }
+    .card-toggle { width: 44px; height: 44px; }
+    #presets-toggle { min-height: 44px; }
+    .preset { min-height: 48px; }
+    .card .attribution a { display: inline-block; padding: 12px 0; margin: -12px 0; }
+  }
+  /* Walk's hint: touch gestures on touch screens, keys elsewhere, and what to do once the
+     mouse is captured (src/controls/walk.js). */
+  .hint-touch, .hint-locked { display: none; }
+  @media (hover: none) and (pointer: coarse) {
+    .hint-touch { display: inline; }
+    .hint-keys { display: none; }
+  }
+  #hint.locked .hint-keys { display: none; }
+  #hint.locked .hint-locked { display: inline; }
+  /* Walk with the mouse captured: a crosshair marks what a click acts on. */
+  .crosshair {
+    position: fixed;
+    z-index: 6; /* over the 3D view, under the panels (see "Layers") */
+    left: 50%;
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    margin: -4px 0 0 -4px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 0 0 1.5px rgba(20, 22, 26, 0.55);
+    pointer-events: none;
+  }
+  /* Walk on touch screens: the joystick under the left thumb. */
+  .walk-stick {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 104px;
+    height: 104px;
+    margin: -52px 0 0 -52px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.16);
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.55), 0 0 0 1px rgba(20, 22, 26, 0.25);
+    pointer-events: none;
+  }
+  .walk-knob {
+    position: absolute;
+    left: 30px;
+    top: 30px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.7);
+    box-shadow: 0 1px 4px rgba(20, 22, 26, 0.35);
+  }
+
+  /* The settings gear: an icon button that fits in any .group (or on its own). */
+  .gear { display: inline-flex; align-items: center; justify-content: center; }
+  .group .gear { padding: 7px 10px; }
+  .gear svg { display: block; transition: transform 0.2s; }
+  .gear[aria-expanded="true"] { color: var(--ink); background: color-mix(in srgb, var(--accent) 22%, transparent); }
+  .gear[aria-expanded="true"] svg { transform: rotate(30deg); }
+  /* The settings panel (src/ui/settings.js): a small dialog placed next to the gear, wherever
+     that is. It lives at the end of <body>, above the panels and the info card. */
+  .settings-panel {
+    position: fixed;
+    z-index: 35; /* over the card, dock and info card (see "Layers"), under the loading bar */
+    box-sizing: border-box;
+    width: min(330px, calc(100vw - 16px));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 10px 12px 12px;
+    background: var(--panel);
+    border: 1px solid var(--panel-edge);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    color: var(--ink);
+    font: 13px/1.35 var(--font-ui);
+  }
+  .settings-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+  .settings-head h2 { margin: 0; font: 600 14px/1.2 var(--font-ui); }
+  .settings-close {
+    flex: none; width: 28px; height: 28px; margin: -4px -6px 0 0; padding: 0; border: 0; border-radius: 50%;
+    background: transparent; color: var(--ink-soft); font: 400 18px/1 var(--font-ui); cursor: pointer;
+  }
+  .settings-close:hover { background: var(--panel-edge); color: var(--ink); }
+  .settings-switch { display: flex; align-items: center; gap: 8px; min-height: 32px; padding: 2px 0 6px; border-bottom: 1px solid var(--panel-edge); cursor: pointer; }
+  .settings-switch input, .settings-option input { flex: none; width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
+  .settings-quality { margin: 8px 0 0; padding: 0; border: 0; }
+  .settings-quality legend { padding: 0; margin-bottom: 4px; font: 600 10px/1.2 var(--font-ui); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
+  .settings-option { display: flex; align-items: flex-start; gap: 9px; padding: 6px 8px; margin: 0 -8px; border-radius: 8px; cursor: pointer; }
+  .settings-option input { margin-top: 2px; }
+  .settings-option:hover { background: color-mix(in srgb, var(--ink) 6%, transparent); }
+  .settings-option:has(input:checked) { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+  .settings-text { display: grid; gap: 1px; min-width: 0; }
+  .settings-name { font-weight: 600; }
+  .settings-desc { font-size: 12px; line-height: 1.3; color: var(--ink-soft); }
+  /* What Auto picked is named next to it (a dot), so the two rows read together. */
+  .settings-auto-pick .settings-name::after { content: " · Auto's pick"; font-weight: 500; color: var(--ink-soft); }
+  .settings-reload { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin: 8px 0 0; font-size: 12px; color: var(--ink-soft); }
+  .settings-reload-button {
+    padding: 6px 12px; border: 0; border-radius: 999px; background: var(--accent); color: var(--accent-ink);
+    font: 500 12.5px/1 var(--font-ui); cursor: pointer;
+  }
+  .settings-now { margin: 8px 0 0; font: 500 11px/1.35 var(--font-num); color: var(--ink-soft); }
+  .settings-close:focus-visible, .settings-reload-button:focus-visible, .gear:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .settings-switch:has(input:focus-visible), .settings-option:has(input:focus-visible) { outline: 2px solid var(--ink); outline-offset: -2px; }
+  @media (pointer: coarse) {
+    .settings-close { width: 44px; height: 44px; margin: -10px -12px -6px 0; }
+    .settings-switch { min-height: 44px; }
+    .settings-option { min-height: 44px; align-items: center; }
+    .settings-switch input, .settings-option input { width: 22px; height: 22px; margin: 0; }
+    .settings-reload-button { min-height: 44px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .gear svg { transition: none; } }
+  @media (forced-colors: active) { .settings-option:has(input:checked), .gear[aria-expanded="true"] { outline: 2px solid CanvasText; } }
+
+  /* Dimension labels (CSS2DRenderer positions them; don't set transform here). */
+  .dim {
+    padding: 2px 5px;
+    border-radius: 3px;
+    background: var(--dim-bg);
+    color: var(--ink);
+    font: 500 11px/1.15 var(--font-num);
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .dim small {
+    display: block;
+    margin-top: 1px;
+    color: var(--ink-soft);
+    font: 600 8.5px/1.1 var(--font-ui);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .dim.total { font-weight: 600; font-size: 12px; }
+  .tag {
+    padding: 2px 5px;
+    border-radius: 3px;
+    background: var(--floor-tag-bg);
+    color: var(--floor-tag-ink);
+    font: 600 8.5px/1.1 var(--font-ui);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  #loading {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 0 16px;
+    color: var(--ink-soft);
+    font-size: 13px;
+    text-align: center;
+    pointer-events: none;
+  }
+  /* Loading: a spinner on first load, then a bar along the top edge plus a pill in the status row. */
+  .spinner {
+    width: 28px;
+    height: 28px;
+    border: 3px solid color-mix(in srgb, var(--ink) 14%, transparent);
+    border-top-color: var(--ink);
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+  }
+  .spinner.small { width: 12px; height: 12px; border-width: 2px; flex: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .progress {
+    position: fixed;
+    z-index: 40; /* above everything: it's the one thing that says "wait" */
+    top: 0;
+    left: 0;
+    right: 0;
+    height: calc(3px + env(safe-area-inset-top, 0px));
+    padding-top: env(safe-area-inset-top, 0px);
+    box-sizing: border-box;
+    background: color-mix(in srgb, var(--accent) 22%, transparent);
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .progress-bar {
+    width: var(--progress, 8%);
+    height: 3px;
+    background: var(--accent);
+    transition: width 0.25s ease-out;
+  }
+  .progress.indeterminate .progress-bar { width: 30%; animation: sweep 1.3s ease-in-out infinite; }
+  @keyframes sweep { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
+  .status .loading-status { align-items: center; gap: 8px; color: var(--ink); font-variant-numeric: tabular-nums; }
+  @media (prefers-reduced-motion: reduce) {
+    .spinner { animation-duration: 3s; }
+    .progress.indeterminate .progress-bar { animation: none; width: 60%; }
+    .progress-bar { transition: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .group button { transition: none; }
+  }
+  @media (forced-colors: active) {
+    .views button[aria-checked="true"], .primary[aria-pressed="true"], .switch[aria-pressed="true"], .preset[aria-pressed="true"] { outline: 2px solid CanvasText; }
+    .preset::after { border-color: CanvasText; }
+  }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<div class="top" id="top">
+<header class="card" id="info">
+  <div class="card-head">
+    <div class="card-titles">
+      <h1>Living room</h1>
+      <p class="figures" id="figures">4.10 × 5.30 m</p>
+    </div>
+    <button type="button" class="card-toggle" id="card-toggle" aria-expanded="true" aria-controls="card-body">
+      <span class="sr-only">Room details and sun</span>
+    </button>
+  </div>
+  <div class="card-body" id="card-body">
+    <p class="note">Tap a piece to see what it is. Turn on Edit to move it or change its finish. Room sizes are estimated from photos.</p>
+    <div class="sun" id="sun-controls" hidden>
+      <label for="sun-time">Sun</label>
+      <input type="range" id="sun-time" min="6" max="23" step="0.25" value="13" aria-valuetext="13:00">
+      <output id="sun-label" for="sun-time" aria-hidden="true">13:00</output>
+      <select id="sun-month" aria-label="Month">
+        <option value="0">Jan</option><option value="1">Feb</option><option value="2">Mar</option><option value="3">Apr</option>
+        <option value="4">May</option><option value="5">Jun</option><option value="6">Jul</option><option value="7">Aug</option>
+        <option value="8">Sep</option><option value="9">Oct</option><option value="10">Nov</option><option value="11">Dec</option>
+      </select>
+    </div>
+    <p class="note attribution" id="attribution" hidden>Surroundings and sun from real data · <a href="https://www.swisstopo.admin.ch" target="_blank" rel="noopener">© swisstopo</a></p>
+  </div>
+</header>
+
+<!-- Presets: whole-room furniture looks, one tap each (editor.js fills the list). -->
+<section class="card presets" id="presets" aria-labelledby="presets-title">
+  <h2>
+    <button type="button" id="presets-toggle" aria-expanded="true" aria-controls="presets-body">
+      <span id="presets-title">Presets</span> <span class="presets-current" id="presets-current"></span><span class="presets-chevron" aria-hidden="true"></span>
+    </button>
+  </h2>
+  <div id="presets-body">
+    <ul class="presets-list" id="presets-list"><li class="presets-loading">Loading the presets…</li></ul>
+  </div>
+</section>
+</div>
+
+<main aria-label="3D view of the living room">
+  <!-- The 3D view (canvas + labels). Its own stacking layer, under the card and the dock. -->
+  <div id="stage"></div>
+  <!-- What the 3D view shows, in words (main.js keeps it current). Hidden until it gets
+       keyboard focus, then it shows as a panel, so sighted keyboard users can use it too. -->
+  <section class="room-text" id="room-text" aria-labelledby="sr-room-title">
+    <h2 id="sr-room-title">The room in words</h2>
+    <p id="sr-room"></p>
+    <h3>Furniture and fittings</h3>
+    <ul id="sr-furniture"></ul>
+  </section>
+</main>
+<div id="announce" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+
+<div class="dock" id="dock" role="region" aria-label="Controls">
+  <div class="status">
+    <div id="loading-status" class="loading-status" role="status" hidden><span class="spinner small" aria-hidden="true"></span><span id="loading-text"></span></div>
+    <div id="readout">Hover or tap the floor to measure from the walls</div>
+    <div id="hint" hidden>
+      <span class="hint-touch">Left thumb walks · Right thumb looks around · Tap the floor to walk there</span>
+      <span class="hint-keys">Click the view to look around with the mouse · WASD to walk, Shift to run · Q/E or ←/→ to turn</span>
+      <span class="hint-locked">The mouse looks around · WASD to walk, Shift to run · Click a piece to see it · Esc frees the mouse</span>
+    </div>
+    <div id="editor" class="selection" hidden>
+      <div class="sel-info">
+        <div id="ed-idle" class="ed-idle">
+          <span>Tap a piece to select it, or pick one:</span>
+          <span id="ed-pieces" class="ed-pieces"></span>
+        </div>
+        <div id="ed-item" class="ed-item" hidden>
+          <a id="sel-name" href="#" target="_blank" rel="noopener">Sofa</a>
+          <span id="sel-size"></span>
+          <span class="sel-hint">Drag to move · arrow keys nudge 1 cm · R rotates · Ctrl+Z undoes</span>
+          <span class="sel-hint sel-hint-touch">Drag to move</span>
+        </div>
+      </div>
+      <div class="sel-actions">
+        <button type="button" id="sel-rotate">Rotate 90°</button>
+        <button type="button" id="sel-reset" title="Put it back where it started (the finish stays)">Reset</button>
+        <button type="button" id="sel-remove" hidden title="Take it out of the room (add it back from the list)">Remove</button>
+        <button type="button" id="sel-undo" disabled>Undo</button>
+        <button type="button" id="sel-done">Done</button>
+      </div>
+      <details id="ed-finish" class="ed-finish" hidden>
+        <summary><span class="ed-finish-title">Finish</span><span id="ed-finish-sum" class="ed-finish-sum"></span></summary>
+        <div id="ed-groups" class="ed-groups"></div>
+        <div class="ed-finish-actions">
+          <label id="ed-match" class="ed-match" hidden><input type="checkbox" id="ed-match-box"> Match the sofa</label>
+          <button type="button" id="ed-apply-all" hidden>Apply to all</button>
+          <button type="button" id="ed-default">Default finish</button>
+        </div>
+      </details>
+    </div>
+  </div>
+  <!-- Views: choose one (radio group; arrow keys move between them). Pressing the active
+       view again resets its camera. -->
+  <div class="group views" role="radiogroup" aria-label="View" id="views">
+    <button type="button" role="radio" id="mode-orbit" data-mode="orbit" aria-checked="true" aria-describedby="views-tip" title="Orbit around the room. Press again to reset the view; double-click to focus on a spot.">3D</button>
+    <button type="button" role="radio" id="mode-plan" data-mode="plan" aria-checked="false" tabindex="-1" aria-describedby="views-tip" title="Floor plan. Press again to reset the view.">Plan</button>
+    <button type="button" role="radio" id="mode-walk" data-mode="walk" aria-checked="false" tabindex="-1" aria-describedby="views-tip" title="Walk through at eye height. Press again to go back to the door.">Walk</button>
+  </div>
+  <p class="sr-only" id="views-tip">Press the selected view again to reset its camera.</p>
+  <div class="group" role="group" aria-label="Editing">
+    <button type="button" class="primary" id="toggle-edit" aria-pressed="false" title="Move furniture and change its finish">Edit</button>
+  </div>
+  <!-- Settings (src/ui/settings.js builds the panel and places it next to this button, wherever
+       it sits): show measurements, rendering quality. The light, doors, window and curtains are
+       set from their info cards; the furniture from the Presets panel (None for the empty room). -->
+  <div class="group" role="group" aria-label="Settings">
+    <button type="button" class="gear" id="settings-button" aria-label="Settings" title="Settings: measurements, rendering quality">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path fill="currentColor" fill-rule="evenodd" d="M10.3 2h3.4l.5 2.6c.6.2 1.2.5 1.7.9l2.5-.9 1.7 2.9-2 1.8a7 7 0 0 1 0 1.9l2 1.8-1.7 2.9-2.5-.9c-.5.4-1.1.7-1.7.9l-.5 2.6h-3.4l-.5-2.6a7 7 0 0 1-1.7-.9l-2.5.9-1.7-2.9 2-1.8a7 7 0 0 1 0-1.9l-2-1.8 1.7-2.9 2.5.9c.5-.4 1.1-.7 1.7-.9L10.3 2zM12 8.6a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 0 0 0-6.8z" transform="translate(0 1)"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- First load: until the room's first frame. -->
+<div id="loading" role="status"><span class="spinner" aria-hidden="true"></span><span>Building the room…</span></div>
+<!-- Everything after that (furniture, neighbourhood, light, presets): a bar along the top
+     edge, and the label in the status row (src/ui/loading.js). -->
+<div id="progress" class="progress" hidden aria-hidden="true"><div class="progress-bar"></div></div>
+<div id="crosshair" class="crosshair" hidden aria-hidden="true"></div>
+
+<script type="module" src="./src/main.js"></script>
+<script>
+  // If the 3D code can't load (offline, blocked CDN, no WebGL), say so instead of showing a blank page.
+  (function () {
+    var box = document.getElementById('loading');
+    function fail(msg) { box.hidden = false; box.textContent = msg; }
+    document.querySelector('script[src$="main.js"]').addEventListener('error', function () {
+      fail('The 3D code could not load. Check your connection and reload. If you opened index.html straight from disk, run it through a local server (see README).');
+    });
+    window.addEventListener('error', function (e) {
+      if (!window.__roomReady) fail('Something went wrong while building the room: ' + (e.message || 'unknown error'));
+    });
+  })();
+</script>
+</body>
+</html>

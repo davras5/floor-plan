@@ -1,0 +1,228 @@
+{
+  "name": "Zebra haworthia in a white ceramic pot (Poly Haven \"Potted Plant 04\")",
+  "file": "model.glb",
+  "bytes": 533280,
+  "source": {
+    "kind": "download",
+    "url": "https://polyhaven.com/a/potted_plant_04",
+    "files": "https://api.polyhaven.com/files/potted_plant_04 (glTF, 1k), downloaded 2026-10-26",
+    "author": "James Ray Cock",
+    "licence": "CC0 1.0 (https://polyhaven.com/license)",
+    "changes": "one material split into leaves/pot/soil (same textures), the ARM texture also used as occlusion, textures re-encoded as WebP (ARM 512 px), meshopt"
+  },
+  "units": "metres, Y up, origin at the centre of the pot's base (on the floor)",
+  "triangles": 8929,
+  "size": {
+    "width": 0.168,
+    "depth": 0.185,
+    "height": 0.267,
+    "note": "W = x, D = z, H = y, metres"
+  },
+  "bounds": {
+    "min": [
+      -0.084,
+      0,
+      -0.084
+    ],
+    "max": [
+      0.084,
+      0.267,
+      0.101
+    ]
+  },
+  "parts": [
+    {
+      "node": "gravel",
+      "triangles": 1380,
+      "material": "haworthia_soil",
+      "min": [
+        -0.074,
+        0.132,
+        -0.076
+      ],
+      "max": [
+        0.073,
+        0.154,
+        0.073
+      ]
+    },
+    {
+      "node": "soil",
+      "triangles": 411,
+      "material": "haworthia_soil",
+      "min": [
+        -0.079,
+        0.134,
+        -0.079
+      ],
+      "max": [
+        0.078,
+        0.153,
+        0.078
+      ]
+    },
+    {
+      "node": "leaves",
+      "triangles": 3394,
+      "material": "haworthia_leaves",
+      "min": [
+        -0.062,
+        0.135,
+        -0.072
+      ],
+      "max": [
+        0.084,
+        0.267,
+        0.101
+      ]
+    },
+    {
+      "node": "pot",
+      "triangles": 3744,
+      "material": "haworthia_pot",
+      "min": [
+        -0.084,
+        0,
+        -0.084
+      ],
+      "max": [
+        0.084,
+        0.155,
+        0.084
+      ]
+    }
+  ],
+  "materials": [
+    {
+      "name": "haworthia_leaves",
+      "role": "leaves: solid scanned geometry (no alpha needed), double-sided",
+      "alphaMode": "OPAQUE",
+      "doubleSided": true,
+      "baseColorFactor": "#ffffff",
+      "roughnessFactor": 1,
+      "metallicFactor": 0,
+      "three": "MeshStandardMaterial",
+      "vertexColors": false,
+      "textures": {
+        "baseColor": {
+          "image": "potted_plant_04_diff.webp",
+          "format": "image/webp",
+          "size": "1024×1024",
+          "kb": 125
+        },
+        "normal": {
+          "image": "potted_plant_04_nor_gl.webp",
+          "format": "image/webp",
+          "size": "1024×1024",
+          "kb": 272
+        },
+        "metallicRoughness": {
+          "image": "potted_plant_04_arm.webp",
+          "format": "image/webp",
+          "size": "512×512",
+          "kb": 26
+        },
+        "occlusion": {
+          "image": "potted_plant_04_arm.webp",
+          "format": "image/webp",
+          "size": "512×512",
+          "kb": 26
+        }
+      }
+    },
+    {
+      "name": "haworthia_pot",
+      "role": "pot: scanned colour texture, tintable",
+      "alphaMode": "OPAQUE",
+      "doubleSided": true,
+      "baseColorFactor": "#ffffff",
+      "roughnessFactor": 1,
+      "metallicFactor": 0,
+      "three": "MeshStandardMaterial",
+      "vertexColors": false,
+      "textures": {
+        "baseColor": {
+          "image": "potted_plant_04_diff.webp",
+          "format": "image/webp",
+          "size": "1024×1024",
+          "kb": 125
+        },
+        "normal": {
+          "image": "potted_plant_04_nor_gl.webp",
+          "format": "image/webp",
+          "size": "1024×1024",
+          "kb": 272
+        },
+        "metallicRoughness": {
+          "image": "potted_plant_04_arm.webp",
+          "format": "image/webp",
+          "size": "512×512",
+          "kb": 26
+        },
+        "occlusion": {
+          "image": "potted_plant_04_arm.webp",
+          "format": "image/webp",
+          "size": "512×512",
+          "kb": 26
+        }
+      }
+    },
+    {
+      "name": "haworthia_soil",
+      "role": "soil and gravel top dressing",
+      "alphaMode": "OPAQUE",
+      "doubleSided": true,
+      "baseColorFactor": "#ffffff",
+      "roughnessFactor": 1,
+      "metallicFactor": 0,
+      "three": "MeshStandardMaterial",
+      "vertexColors": false,
+      "textures": {
+        "baseColor": {
+          "image": "potted_plant_04_diff.webp",
+          "format": "image/webp",
+          "size": "1024×1024",
+          "kb": 125
+        },
+        "normal": {
+          "image": "potted_plant_04_nor_gl.webp",
+          "format": "image/webp",
+          "size": "1024×1024",
+          "kb": 272
+        },
+        "metallicRoughness": {
+          "image": "potted_plant_04_arm.webp",
+          "format": "image/webp",
+          "size": "512×512",
+          "kb": 26
+        },
+        "occlusion": {
+          "image": "potted_plant_04_arm.webp",
+          "format": "image/webp",
+          "size": "512×512",
+          "kb": 26
+        }
+      }
+    }
+  ],
+  "pot": {
+    "recolourable": "tint only",
+    "how": "haworthia_pot uses the scan's colour texture (an off-white glazed pot); its color multiplies that texture, so it can be tinted darker but not lightened",
+    "current": "#ffffff (texture: off-white glaze)",
+    "suggested": {
+      "default": "leave as is (off-white)",
+      "alternatives": [
+        "#d9d2c6 (sand tint)",
+        "#9fa79a (sage tint)"
+      ]
+    }
+  },
+  "gltf": {
+    "extensionsRequired": [
+      "EXT_texture_webp",
+      "KHR_mesh_quantization",
+      "EXT_meshopt_compression"
+    ],
+    "loader": "GLTFLoader with setMeshoptDecoder(MeshoptDecoder) from three/addons/libs/meshopt_decoder.module.js; WebP textures and quantized geometry need nothing else in three r170"
+  }
+}

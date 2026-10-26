@@ -1,0 +1,13 @@
+# Generated
+dist/
+test-output/
+node_modules/
+__pycache__/
+
+# Large source downloads, kept locally only:
+#   raw/downloads/   manufacturer 3D files (the app uses compacted copies in assets/furniture/)
+#   raw/swisstopo/   swisstopo tiles (scripts/surroundings.py turns them into assets/surroundings/)
+raw/
+
+# Drop folder for new manufacturer downloads (processed into assets/furniture/, then moved to raw/downloads/)
+assets/incoming/

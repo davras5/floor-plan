@@ -1,0 +1,151 @@
+{
+  "name": "Snake plant (Dracaena trifasciata 'Laurentii'), small",
+  "file": "model.glb",
+  "bytes": 149264,
+  "source": {
+    "kind": "procedural",
+    "script": "scripts/plants/snake-plant.mjs (seed 3, uses lib.mjs), then scripts/plants/pack.mjs",
+    "url": null,
+    "author": "Generated for this project (no third-party content)",
+    "licence": "CC0 1.0"
+  },
+  "units": "metres, Y up, origin at the centre of the pot's base (on the floor)",
+  "triangles": 1784,
+  "size": {
+    "width": 0.194,
+    "depth": 0.14,
+    "height": 0.406,
+    "note": "W = x, D = z, H = y, metres"
+  },
+  "bounds": {
+    "min": [
+      -0.09,
+      0,
+      -0.07
+    ],
+    "max": [
+      0.104,
+      0.406,
+      0.07
+    ]
+  },
+  "footprint": {
+    "width": 0.14,
+    "depth": 0.14,
+    "height": 0.125,
+    "note": "the pot alone (W = x, D = z)"
+  },
+  "parts": [
+    {
+      "node": "pot",
+      "triangles": 816,
+      "material": "snake_pot",
+      "min": [
+        -0.07,
+        0,
+        -0.07
+      ],
+      "max": [
+        0.07,
+        0.125,
+        0.07
+      ]
+    },
+    {
+      "node": "soil",
+      "triangles": 324,
+      "material": "snake_soil",
+      "min": [
+        -0.064,
+        0.109,
+        -0.064
+      ],
+      "max": [
+        0.064,
+        0.113,
+        0.064
+      ]
+    },
+    {
+      "node": "leaves",
+      "triangles": 644,
+      "material": "snake_leaves",
+      "min": [
+        -0.09,
+        0.092,
+        -0.032
+      ],
+      "max": [
+        0.104,
+        0.406,
+        0.056
+      ]
+    }
+  ],
+  "materials": [
+    {
+      "name": "snake_pot",
+      "role": "pot: plain colour, recolourable",
+      "alphaMode": "OPAQUE",
+      "doubleSided": false,
+      "baseColorFactor": "#3b3a37",
+      "roughnessFactor": 0.72,
+      "metallicFactor": 0,
+      "three": "MeshStandardMaterial",
+      "vertexColors": false,
+      "textures": {}
+    },
+    {
+      "name": "snake_soil",
+      "role": "soil: vertex colours",
+      "alphaMode": "OPAQUE",
+      "doubleSided": false,
+      "baseColorFactor": "#ffffff",
+      "roughnessFactor": 1,
+      "metallicFactor": 0,
+      "three": "MeshStandardMaterial",
+      "vertexColors": true,
+      "textures": {}
+    },
+    {
+      "name": "snake_leaves",
+      "role": "leaves: opaque geometry cut to the leaf outline (no alpha), double-sided; vertex colours darken the bases",
+      "alphaMode": "OPAQUE",
+      "doubleSided": true,
+      "baseColorFactor": "#ffffff",
+      "roughnessFactor": 0.55,
+      "metallicFactor": 0,
+      "three": "MeshStandardMaterial",
+      "vertexColors": true,
+      "textures": {
+        "baseColor": {
+          "image": "snake_leaf_colour.webp",
+          "format": "image/webp",
+          "size": "1024×1024",
+          "kb": 123
+        }
+      }
+    }
+  ],
+  "pot": {
+    "recolourable": true,
+    "how": "material snake_pot has no texture and no vertex colours: set its color",
+    "current": "#3b3a37",
+    "suggested": {
+      "default": "#3b3a37 (charcoal)",
+      "alternatives": [
+        "#d6cdc1 (warm sand)",
+        "#ece9e3 (off-white)",
+        "#b5694a (terracotta)"
+      ]
+    }
+  },
+  "gltf": {
+    "extensionsRequired": [
+      "EXT_texture_webp",
+      "KHR_mesh_quantization",
+      "EXT_meshopt_compression"
+    ],
+    "loader": "GLTFLoader with setMeshoptDecoder(MeshoptDecoder) from three/addons/libs/meshopt_decoder.module.js; WebP textures and quantized geometry need nothing else in three r170"
+  }
+}

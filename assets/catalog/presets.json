@@ -1,0 +1,203 @@
+{
+  "$schema": "./presets.schema.json",
+  "default": "wood-white",
+  "palette": [
+    ["sofa", "upholstery"],
+    ["muuto-fiber-side-chair-wood", "shell"],
+    ["muuto-fiber-side-chair-wood", "base"],
+    ["table", "finish"]
+  ],
+  "pieces": [
+    {
+      "id": "sofa",
+      "label": "Sofa",
+      "product": "muuto-in-situ-2-seater-7",
+      "alternatives": ["muuto-in-situ-2-seater-7", "muuto-outline-soft-2-seater", "muuto-outline-soft-3-seater"],
+      "place": {"left": 0.02, "window": 0.15, "rotation": 90}
+    },
+    {
+      "id": "pouf",
+      "label": "Pouf",
+      "product": "muuto-outline-pouf",
+      "present": false,
+      "optional": true,
+      "match": "sofa",
+      "attach": {"to": "sofa", "front": 0.25, "past": 0.15, "hostWindow": 0.45, "rotation": 0}
+    },
+    {
+      "id": "coffee-table",
+      "label": "Coffee table",
+      "product": "muuto-soft-side-table",
+      "optional": true,
+      "attach": {"to": "sofa", "end": "door", "seat": 0.52, "front": 0.3, "clear": 0.05, "rotation": 0}
+    },
+    {
+      "id": "table",
+      "label": "Table",
+      "product": "muuto-workshop-table-130x65",
+      "place": {"left": 0.925, "door": 0.2, "rotation": 90}
+    },
+    {
+      "id": "chair-1",
+      "label": "Chair 1",
+      "product": "muuto-fiber-side-chair-wood",
+      "around": {"to": "table", "dx": -0.49, "dz": -0.28, "rotation": 90}
+    },
+    {
+      "id": "chair-2",
+      "label": "Chair 2",
+      "product": "muuto-fiber-side-chair-wood",
+      "around": {"to": "table", "dx": -0.49, "dz": 0.28, "rotation": 90}
+    },
+    {
+      "id": "chair-3",
+      "label": "Chair 3",
+      "product": "muuto-fiber-side-chair-wood",
+      "around": {"to": "table", "dx": 0.49, "dz": -0.28, "rotation": 270}
+    },
+    {
+      "id": "chair-4",
+      "label": "Chair 4",
+      "product": "muuto-fiber-side-chair-wood",
+      "around": {"to": "table", "dx": 0.49, "dz": 0.28, "rotation": 270}
+    },
+    {
+      "id": "sill-haworthia",
+      "label": "Haworthia",
+      "product": "polyhaven-potted-plant-04",
+      "optional": true,
+      "movable": false,
+      "place": {"x": 0.98, "z": -0.085, "y": 0.84, "rotation": 180}
+    },
+    {
+      "id": "sill-rubber-plant",
+      "label": "Rubber plant",
+      "product": "made-rubber-plant",
+      "optional": true,
+      "movable": false,
+      "place": {"x": 1.55, "z": -0.085, "y": 0.84, "rotation": 0}
+    },
+    {
+      "id": "sill-snake-plant",
+      "label": "Snake plant",
+      "product": "made-snake-plant",
+      "optional": true,
+      "movable": false,
+      "place": {"x": 2.1, "z": -0.085, "y": 0.84, "rotation": 0}
+    }
+  ],
+  "presets": [
+    {
+      "id": "wood-white",
+      "name": "Wood & white",
+      "summary": "Outline + pouf · Steelcut 220",
+      "note": "Outline Soft 2-seater and pouf in off-white Steelcut 220 on polished aluminium legs, an oak Soft Side Table on its pale grey base, white shells on oak, warm grey linoleum table on oak",
+      "pieces": {
+        "sofa": {
+          "product": "muuto-outline-soft-2-seater",
+          "choices": {"upholstery": "SA08", "base": "aluminium"},
+          "place": {"left": 0.02, "window": 0.45, "rotation": 90}
+        },
+        "pouf": {"present": true, "place": {"left": 1.147, "window": 0.3, "rotation": 0}},
+        "coffee-table": {
+          "present": true,
+          "choices": {"size": "48R1", "top": "05", "base": "02"},
+          "place": {"left": 1.193, "window": 1.393, "rotation": 0}
+        },
+        "table": {"choices": {"finish": "02"}, "place": {"left": 0.925, "door": 0.2, "rotation": 90}},
+        "muuto-fiber-side-chair-wood": {"choices": {"shell": "04", "base": "04", "glides": "1"}},
+        "chair-1": {"place": {"left": 0.497, "door": 0.888, "rotation": 90}},
+        "chair-2": {"place": {"left": 0.497, "door": 0.328, "rotation": 90}},
+        "chair-3": {"place": {"left": 1.477, "door": 0.888, "rotation": 270}},
+        "chair-4": {"place": {"left": 1.477, "door": 0.328, "rotation": 270}},
+        "sill-haworthia": {"present": true},
+        "sill-rubber-plant": {"present": true},
+        "sill-snake-plant": {"present": true}
+      }
+    },
+    {
+      "id": "outline-pouf",
+      "name": "Outline 2-seater + pouf",
+      "summary": "Clay 12 on aluminium legs",
+      "note": "Outline Soft 2-seater and pouf in Clay 12 on polished aluminium legs: an L with a movable foot end, and an all-grey Soft Side Table in linoleum",
+      "pieces": {
+        "sofa": {
+          "product": "muuto-outline-soft-2-seater",
+          "choices": {"upholstery": "CD12", "base": "aluminium"},
+          "place": {"left": 0.02, "window": 0.45, "rotation": 90}
+        },
+        "pouf": {"present": true, "place": {"left": 1.147, "window": 0.3, "rotation": 0}},
+        "coffee-table": {
+          "present": true,
+          "choices": {"size": "48R1", "top": "02", "base": "02"},
+          "place": {"left": 1.193, "window": 1.393, "rotation": 0}
+        },
+        "table": {"choices": {"finish": "02"}, "place": {"left": 0.925, "door": 0.2, "rotation": 90}},
+        "muuto-fiber-side-chair-wood": {"choices": {"shell": "04", "base": "04", "glides": "1"}},
+        "chair-1": {"place": {"left": 0.497, "door": 0.888, "rotation": 90}},
+        "chair-2": {"place": {"left": 0.497, "door": 0.328, "rotation": 90}},
+        "chair-3": {"place": {"left": 1.477, "door": 0.888, "rotation": 270}},
+        "chair-4": {"place": {"left": 1.477, "door": 0.328, "rotation": 270}},
+        "sill-haworthia": {"present": true},
+        "sill-rubber-plant": {"present": true},
+        "sill-snake-plant": {"present": true}
+      }
+    },
+    {
+      "id": "grey",
+      "name": "Grey (as delivered)",
+      "summary": "In Situ with chaise · Clay 12",
+      "note": "In Situ in Clay 12 with its black frame, an oak Soft Side Table on its pale grey base, white shells on oak, warm grey linoleum table",
+      "pieces": {
+        "sofa": {
+          "product": "muuto-in-situ-2-seater-7",
+          "choices": {"upholstery": "CD12", "frame": "01"},
+          "place": {"left": 0.02, "window": 0.15, "rotation": 90}
+        },
+        "pouf": {"present": false},
+        "coffee-table": {
+          "present": true,
+          "choices": {"size": "48R1", "top": "05", "base": "02"},
+          "place": {"left": 1.698, "window": 1.554, "rotation": 0}
+        },
+        "table": {"choices": {"finish": "02"}, "place": {"left": 0.925, "door": 0.2, "rotation": 90}},
+        "muuto-fiber-side-chair-wood": {"choices": {"shell": "04", "base": "04", "glides": "1"}},
+        "chair-1": {"place": {"left": 0.497, "door": 0.888, "rotation": 90}},
+        "chair-2": {"place": {"left": 0.497, "door": 0.328, "rotation": 90}},
+        "chair-3": {"place": {"left": 1.477, "door": 0.888, "rotation": 270}},
+        "chair-4": {"place": {"left": 1.477, "door": 0.328, "rotation": 270}},
+        "sill-haworthia": {"present": true},
+        "sill-rubber-plant": {"present": true},
+        "sill-snake-plant": {"present": true}
+      }
+    },
+    {
+      "id": "warm-light",
+      "name": "Warm light",
+      "summary": "In Situ · Ecriture 210, ochre chairs",
+      "note": "In Situ in sandy Ecriture 210, a beige green Soft Side Table, ochre shells on oak, warm grey linoleum table",
+      "pieces": {
+        "sofa": {
+          "product": "muuto-in-situ-2-seater-7",
+          "choices": {"upholstery": "EB07", "frame": "01"},
+          "place": {"left": 0.02, "window": 0.15, "rotation": 90}
+        },
+        "pouf": {"present": false},
+        "coffee-table": {
+          "present": true,
+          "choices": {"size": "48R1", "top": "03", "base": "03"},
+          "place": {"left": 1.698, "window": 1.554, "rotation": 0}
+        },
+        "table": {"choices": {"finish": "02"}, "place": {"left": 0.925, "door": 0.2, "rotation": 90}},
+        "muuto-fiber-side-chair-wood": {"choices": {"shell": "05", "base": "04", "glides": "1"}},
+        "chair-1": {"place": {"left": 0.497, "door": 0.888, "rotation": 90}},
+        "chair-2": {"place": {"left": 0.497, "door": 0.328, "rotation": 90}},
+        "chair-3": {"place": {"left": 1.477, "door": 0.888, "rotation": 270}},
+        "chair-4": {"place": {"left": 1.477, "door": 0.328, "rotation": 270}},
+        "sill-haworthia": {"present": true},
+        "sill-rubber-plant": {"present": true},
+        "sill-snake-plant": {"present": true}
+      }
+    }
+  ]
+}

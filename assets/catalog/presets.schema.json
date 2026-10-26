@@ -1,0 +1,339 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "presets.schema.json",
+  "title": "Room pieces and presets",
+  "description": "What stands in the room and where (pieces), and whole-room presets that choose, for each piece, its product, finish and place. Products and their options are in products.json. Coordinates are metres: x from the left wall, z from the window wall. Rotation is in degrees: 0 = back toward the window wall, 90 = back against the left wall, 180 = back toward the door wall, 270 = back against the right wall.",
+  "type": "object",
+  "required": [
+    "pieces",
+    "presets",
+    "default"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "default": {
+      "type": "string",
+      "description": "The id of the preset a first visit starts with."
+    },
+    "palette": {
+      "description": "The colours shown for each preset in the Presets panel, as [piece or product id, option group].",
+      "type": "array",
+      "items": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "string"
+          }
+        ],
+        "minItems": 2,
+        "maxItems": 2
+      }
+    },
+    "pieces": {
+      "description": "The room's pieces, in order: a piece placed relative to another comes after it.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/piece"
+      }
+    },
+    "presets": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/preset"
+      }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "rotation": {
+      "enum": [
+        0,
+        90,
+        180,
+        270
+      ]
+    },
+    "place": {
+      "description": "Where a piece stands, as clear distances from its footprint to the walls: one of left / right / x (the centre) and one of window / door / z (the centre). Distances to walls keep a piece put when the room's measurements or the piece's model change.",
+      "type": "object",
+      "required": [
+        "rotation"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "left": {
+          "type": "number",
+          "minimum": 0
+        },
+        "right": {
+          "type": "number",
+          "minimum": 0
+        },
+        "x": {
+          "type": "number"
+        },
+        "window": {
+          "type": "number",
+          "minimum": 0
+        },
+        "door": {
+          "type": "number",
+          "minimum": 0
+        },
+        "z": {
+          "type": "number"
+        },
+        "rotation": {
+          "$ref": "#/$defs/rotation"
+        },
+        "y": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Stands on something this high (the windowsill), instead of the floor."
+        }
+      },
+      "allOf": [
+        {
+          "oneOf": [
+            {
+              "required": [
+                "left"
+              ]
+            },
+            {
+              "required": [
+                "right"
+              ]
+            },
+            {
+              "required": [
+                "x"
+              ]
+            }
+          ]
+        },
+        {
+          "oneOf": [
+            {
+              "required": [
+                "window"
+              ]
+            },
+            {
+              "required": [
+                "door"
+              ]
+            },
+            {
+              "required": [
+                "z"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "piece": {
+      "type": "object",
+      "required": [
+        "id",
+        "label",
+        "product"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "label": {
+          "type": "string",
+          "description": "Shown in the edit bar and the info card, e.g. Sofa, Chair 1."
+        },
+        "product": {
+          "type": "string",
+          "description": "The product id it starts as (before any preset)."
+        },
+        "alternatives": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Products it can be switched to under Model."
+        },
+        "present": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether it's in the room before any preset says otherwise."
+        },
+        "optional": {
+          "type": "boolean",
+          "description": "Can be added and removed in Edit."
+        },
+        "match": {
+          "type": "string",
+          "description": "Follows this piece's finish until it's given its own (the pouf matches the sofa)."
+        },
+        "place": {
+          "$ref": "#/$defs/place"
+        },
+        "attach": {
+          "description": "Placed by another piece: in front of its window end (the pouf by the sofa), or with end: door, in front of the seat at its door end (the coffee table).",
+          "type": "object",
+          "required": [
+            "to",
+            "front",
+            "rotation"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "to": {
+              "type": "string"
+            },
+            "front": {
+              "type": "number",
+              "description": "Clear gap from that piece's front (its seat, measured on the model)."
+            },
+            "past": {
+              "type": "number",
+              "description": "end: window: how far it reaches beyond that piece's window end."
+            },
+            "hostWindow": {
+              "type": "number",
+              "description": "While this piece is in the room, the other stands this far from the window wall, to make room."
+            },
+            "rotation": {
+              "$ref": "#/$defs/rotation"
+            },
+            "end": {
+              "enum": [
+                "window",
+                "door"
+              ],
+              "default": "window"
+            },
+            "seat": {
+              "type": "number",
+              "description": "end: door: centred this far in from that piece's door end (the middle of its seat)."
+            },
+            "clear": {
+              "type": "number",
+              "description": "end: door: at least this far past that piece's footprint (in front of the In Situ's chaise)."
+            }
+          }
+        },
+        "around": {
+          "description": "At an offset from another piece's centre (chairs around the table), so they move together.",
+          "type": "object",
+          "required": [
+            "to",
+            "dx",
+            "dz",
+            "rotation"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "to": {
+              "type": "string"
+            },
+            "dx": {
+              "type": "number"
+            },
+            "dz": {
+              "type": "number"
+            },
+            "rotation": {
+              "$ref": "#/$defs/rotation"
+            }
+          }
+        },
+        "movable": {
+          "type": "boolean",
+          "default": true,
+          "description": "False for a piece that stays where it's placed (the plant on the windowsill): it isn't dragged in Edit or kept inside the room's walls."
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "place"
+          ]
+        },
+        {
+          "required": [
+            "attach"
+          ]
+        },
+        {
+          "required": [
+            "around"
+          ]
+        }
+      ]
+    },
+    "preset": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "summary",
+        "pieces"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id",
+          "description": "Also its link: …#preset=<id>. (none is taken: the empty room.)",
+          "not": {
+            "const": "none"
+          }
+        },
+        "name": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string",
+          "description": "The short line under its name in the Presets panel."
+        },
+        "note": {
+          "type": "string",
+          "description": "The whole preset in a sentence (tooltip)."
+        },
+        "pieces": {
+          "description": "By piece id, or by product id for every piece of that product (the four chairs). Pieces it doesn't name keep what they have.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "product": {
+                "type": "string"
+              },
+              "present": {
+                "type": "boolean"
+              },
+              "choices": {
+                "description": "Option group id → option id, as in the product's options file. Groups left out take the default; a piece that matches another and has no choices follows it.",
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "place": {
+                "$ref": "#/$defs/place"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
