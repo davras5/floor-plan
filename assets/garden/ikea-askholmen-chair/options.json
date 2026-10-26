@@ -1,0 +1,50 @@
+{
+  "product": "ASKHOLMEN chair, outdoor, foldable, dark brown",
+  "item": "{cushion}",
+  "currency": "CHF",
+  "fetched": "2026-10-26",
+  "market": "IKEA Switzerland (ikea.com/ch), prices in CHF incl. VAT, without delivery",
+  "sources": [
+    "https://www.ikea.com/ch/en/p/askholmen-chair-outdoor-foldable-dark-brown-20557502/ (205.575.02, CHF 30: solid acacia, acrylic stain; 36 × 49 × 87 cm, seat 36 × 30 cm at 46 cm; folded 10 cm; the only colour IKEA Switzerland sells)",
+    "https://www.ikea.com/ch/en/p/askholmen-chair-outdoor-foldable-dark-brown-kuddarna-light-grey-beige-s99575305/ (with a KUDDARNA chair pad, light grey-beige, 36 × 32 cm: CHF 37.50)",
+    "https://www.ikea.com/ch/de/p/kuddarna-stuhlpolster-aussen-helles-graubeige-00547222/ (the pad alone, 005.472.22, CHF 7.50)"
+  ],
+  "note": "IKEA publishes no 3D model: scripts/garden/askholmen.mjs builds this one to IKEA's dimension drawing.",
+  "groups": [
+    {
+      "id": "finish",
+      "label": "Finish",
+      "parts": ["wood"],
+      "price": "total",
+      "default": "dark-brown",
+      "options": [
+        {
+          "id": "dark-brown",
+          "name": "Dark brown stained acacia",
+          "color": "#8f6744",
+          "price": 30,
+          "material": {"type": "wood", "color": "#8f6744", "roughness": 0.72}
+        }
+      ]
+    },
+    {
+      "id": "cushion",
+      "label": "Cushion",
+      "parts": ["cushion"],
+      "price": "add",
+      "default": "none",
+      "options": [
+        {"id": "none", "code": "20557502", "name": "No cushion", "color": "#e9e6e1", "model": "standard", "materials": {}},
+        {
+          "id": "kuddarna",
+          "code": "s99575305",
+          "name": "KUDDARNA chair pad, light grey-beige",
+          "color": "#c4bcae",
+          "price": 7.5,
+          "model": "cushion",
+          "material": {"type": "fabric", "color": "#c4bcae", "roughness": 0.95}
+        }
+      ]
+    }
+  ]
+}

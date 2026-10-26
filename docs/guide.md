@@ -168,11 +168,12 @@ assets/catalog/            products.json, presets.json and their schemas (docs/c
 assets/furniture/          web-ready models, finishes (options.json) and swatches
 assets/plants/             the plants (GLB) and where they come from (info.json)
 assets/art/                the framed prints: frame models (GLB), print images, options.json
+assets/garden/             the balcony's table and chairs (GLB, made for this planner), options.json
 assets/surroundings/       processed swisstopo data
 assets/incoming/           drop folder for new downloads (not published, not in git)
 scripts/                   serve.mjs (dev server), smoke.mjs and check-catalog.mjs (npm test),
                            compact-obj.mjs, surroundings.py, build-artifact.mjs, plants/,
-                           art/frames.mjs (the print frames)
+                           art/frames.mjs (the print frames), garden/askholmen.mjs (balcony)
 docs/                      catalog.md, code-review.md, performance-review.md, design-review.md,
                            photos/ (the reference photos)
 raw/                       not in git: manufacturer downloads (raw/downloads/) and swisstopo
@@ -224,6 +225,14 @@ A first visit starts with the **Outline 2-seater + pouf, Steelcut 220** preset (
   the other print instead. They stay where they are in Edit; **Remove** takes one off the wall.
   The models are made by `scripts/art/frames.mjs`; the images and their licence are in
   [THIRD_PARTY.md](../THIRD_PARTY.md).
+- **On the balcony, IKEA ASKHOLMEN**, folding and in dark brown stained acacia like the chairs in
+  the balcony photos: the table (60 × 62 cm, 73 cm high, CHF 39.95) 5 cm from the parapet in
+  front of the window, and two chairs (36 × 49 × 87 cm, CHF 30 each) facing each other across it
+  (x 0.38–2.02 m, z -1.75 to -1.15 m, on the balcony floor 12 cm below the room's), so the way
+  from the balcony door along the facade stays 85 cm wide. **Cushion** under Finish adds IKEA's
+  KUDDARNA chair pad (light grey-beige, CHF 7.50; the *Ecriture 210* preset has them). IKEA has
+  no 3D model of either: `scripts/garden/askholmen.mjs` builds them, slat by slat, to IKEA's
+  dimension drawings. They stay put in Edit; **Remove** takes them away.
 - **The existing pendant**, traced from the photos and hung from the ceiling outlet (one of the
   room's fittings, see Views and controls).
 

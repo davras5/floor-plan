@@ -265,6 +265,40 @@
         ],
         "variants": {"moebe": {"file": "assets/art/beyeler-hodler-mont-blanc-50x70/moebe.glb"}}
       }
+    },
+    "ikea-askholmen-chair": {
+      "maker": "IKEA",
+      "name": "ASKHOLMEN chair, outdoor, foldable",
+      "category": "chair",
+      "url": "https://www.ikea.com/ch/en/p/askholmen-chair-outdoor-foldable-dark-brown-20557502/",
+      "itemUrl": "https://www.ikea.com/ch/en/p/-{item}/",
+      "size": {"width": 0.36, "depth": 0.49, "height": 0.87},
+      "finish": "Dark brown stained acacia",
+      "options": "assets/garden/ikea-askholmen-chair/options.json",
+      "source": {"name": "Made for this planner", "author": "Procedural, scripts/garden/askholmen.mjs, to IKEA's dimension drawing", "licence": "CC0 1.0"},
+      "model": {
+        "file": "assets/garden/ikea-askholmen-chair/model.glb",
+        "parts": [
+          {"id": "wood", "match": "^Wood$", "uvPerM": 1, "material": {"color": "#8f6744", "roughness": 0.72}},
+          {"id": "cushion", "match": "^Cushion$", "material": {"color": "#c4bcae", "roughness": 0.95}}
+        ],
+        "variants": {"cushion": {"file": "assets/garden/ikea-askholmen-chair/cushion.glb"}}
+      }
+    },
+    "ikea-askholmen-table-60x62": {
+      "maker": "IKEA",
+      "name": "ASKHOLMEN table, outdoor, foldable, 60 × 62 cm",
+      "category": "dining-table",
+      "url": "https://www.ikea.com/ch/en/p/askholmen-table-outdoor-foldable-dark-brown-30557498/",
+      "itemUrl": "https://www.ikea.com/ch/en/p/-{item}/",
+      "size": {"width": 0.6, "depth": 0.62, "height": 0.73},
+      "finish": "Dark brown stained acacia",
+      "options": "assets/garden/ikea-askholmen-table-60x62/options.json",
+      "source": {"name": "Made for this planner", "author": "Procedural, scripts/garden/askholmen.mjs, to IKEA's dimension drawing", "licence": "CC0 1.0"},
+      "model": {
+        "file": "assets/garden/ikea-askholmen-table-60x62/model.glb",
+        "parts": [{"id": "wood", "match": "^Wood$", "uvPerM": 1, "material": {"color": "#8f6744", "roughness": 0.72}}]
+      }
     }
   }
 }

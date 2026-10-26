@@ -112,7 +112,7 @@ export function createEditor({ furniture, state, canvas, stage, editor, aim, pic
     if (item) {
       const d = furniture.describe(item);
       const link = document.getElementById('sel-name');
-      link.textContent = d.source ? d.name : `${d.maker} ${d.name}`;
+      link.textContent = titleOf(d, item);
       if (d.url) link.href = d.url;
       else link.removeAttribute('href');
       // On phones the finish is in the Finish line below, so this stays one short line.
@@ -127,6 +127,9 @@ export function createEditor({ furniture, state, canvas, stage, editor, aim, pic
   // Whole amounts as they are (EUR 1,749); others with their rappen (CHF 166.60).
   const money = (n, cur = 'EUR') => `${cur} ${n.toLocaleString('en-US', { minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 })}`;
   const priceText = (d) => (d.price ? money(d.price.amount, d.price.currency) : d.offered ? '' : 'not sold in this size');
+  // A piece is named with its maker (Muuto Outline…, IKEA ASKHOLMEN…), except a model that isn't a
+  // product you can buy (a plant), or a print, which is named by its artwork.
+  const titleOf = (d, item) => ((d.source && !d.shop) || item.spec.category === 'art' ? d.name : `${d.maker} ${d.name}`);
   const narrowScreen = () => window.innerWidth < 640;
   const coarse = window.matchMedia('(pointer: coarse)');
   const swatchSize = () => (coarse.matches ? 40 : 30); // px, matches .swatch in index.html
@@ -219,7 +222,7 @@ export function createEditor({ furniture, state, canvas, stage, editor, aim, pic
         el('div', { class: 'sel-pop-titles', id: titleId, tabindex: '-1' },
           el('span', { class: 'sel-pop-label' }, d.label),
           // A model that isn't a maker's product (a plant) is named on its own; its source is below.
-          el(d.url ? 'a' : 'span', { class: 'sel-pop-name', href: d.url, target: d.url && '_blank', rel: d.url && 'noopener' }, d.source ? d.name : `${d.maker} ${d.name}`)),
+          el(d.url ? 'a' : 'span', { class: 'sel-pop-name', href: d.url, target: d.url && '_blank', rel: d.url && 'noopener' }, titleOf(d, item))),
         el('button', { type: 'button', class: 'sel-pop-close', 'aria-label': 'Close', title: 'Close (Esc)', on: { click: () => selectItem(null) } }, '×')),
       el('dl', { class: 'sel-pop-facts' },
         el('div', {}, el('dt', {}, 'Finish'), el('dd', {}, d.finish, d.notes.map((n) => el('small', { class: 'sel-pop-note' }, n)))),

@@ -1,0 +1,29 @@
+{
+  "product": "ASKHOLMEN table, outdoor, foldable, dark brown, 60 × 62 cm",
+  "item": "30557498",
+  "currency": "CHF",
+  "fetched": "2026-10-26",
+  "market": "IKEA Switzerland (ikea.com/ch), prices in CHF incl. VAT, without delivery",
+  "sources": [
+    "https://www.ikea.com/ch/en/p/askholmen-table-outdoor-foldable-dark-brown-30557498/ (305.574.98, CHF 39.95: solid acacia, acrylic stain; top 60 × 62 cm, 73 cm high, folded 6 cm; the only colour IKEA Switzerland sells)"
+  ],
+  "note": "IKEA publishes no 3D model: scripts/garden/askholmen.mjs builds this one to IKEA's dimension drawing.",
+  "groups": [
+    {
+      "id": "finish",
+      "label": "Finish",
+      "parts": ["wood"],
+      "price": "total",
+      "default": "dark-brown",
+      "options": [
+        {
+          "id": "dark-brown",
+          "name": "Dark brown stained acacia",
+          "color": "#8f6744",
+          "price": 39.95,
+          "material": {"type": "wood", "color": "#8f6744", "roughness": 0.72}
+        }
+      ]
+    }
+  ]
+}

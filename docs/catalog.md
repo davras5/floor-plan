@@ -119,7 +119,8 @@ how it's placed when nothing else says where.
   (the windowsill), or for a picture, is the height of its frame's bottom edge. A picture
   (`category: "art"`) is turned to face into the room and placed 0–5 cm from the wall behind it
   (`left: 0.002` with rotation 90, `door: 0.002` with 180), so it goes with that wall when the 3D
-  view cuts it away; the check makes sure of both.
+  view cuts it away; the check makes sure of both. Out on the balcony `y` is its floor, -0.12,
+  with `x` and `z` (negative: beyond the window wall) for the centre.
 - **`attach`** places it by another piece. By default it goes in front of that piece's window end
   (the pouf):
   - `front`: the gap from that piece's front;

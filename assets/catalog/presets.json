@@ -110,15 +110,39 @@
       "optional": true,
       "present": false,
       "place": {"left": 0.02, "z": 2.4, "rotation": 90}
+    },
+    {
+      "id": "balcony-table",
+      "label": "Balcony table",
+      "product": "ikea-askholmen-table-60x62",
+      "optional": true,
+      "movable": false,
+      "place": {"x": 1.2, "z": -1.45, "y": -0.12, "rotation": 90}
+    },
+    {
+      "id": "balcony-chair-1",
+      "label": "Balcony chair 1",
+      "product": "ikea-askholmen-chair",
+      "optional": true,
+      "movable": false,
+      "place": {"x": 0.625, "z": -1.45, "y": -0.12, "rotation": 90}
+    },
+    {
+      "id": "balcony-chair-2",
+      "label": "Balcony chair 2",
+      "product": "ikea-askholmen-chair",
+      "optional": true,
+      "movable": false,
+      "place": {"x": 1.775, "z": -1.45, "y": -0.12, "rotation": 270}
     }
   ],
   "presets": [
     {
       "id": "wood-white",
-      "maker": "Muuto",
+      "maker": "Muuto · IKEA",
       "name": "Outline 2-seater + pouf, Steelcut 220",
       "summary": "Aluminium legs · oak side table · white chairs",
-      "note": "Outline Soft 2-seater and pouf in off-white Steelcut 220 on polished aluminium legs, an oak Soft Side Table on its pale grey base, white shells on oak, warm grey linoleum table on oak, a black Post floor lamp by the sofa; two Hodler prints in white frames",
+      "note": "Outline Soft 2-seater and pouf in off-white Steelcut 220 on polished aluminium legs, an oak Soft Side Table on its pale grey base, white shells on oak, warm grey linoleum table on oak, a black Post floor lamp by the sofa; two Hodler prints in white frames; IKEA's ASKHOLMEN folding table and two chairs on the balcony",
       "pieces": {
         "sofa": {
           "product": "muuto-outline-soft-2-seater",
@@ -142,15 +166,19 @@
         "sill-snake-plant": {"present": true},
         "sofa-picture": {"product": "beyeler-hodler-grammont-60x80", "present": true, "choices": {"frame": "white"}, "place": {"left": 0.002, "z": 1.3, "y": 1.05, "rotation": 90}},
         "table-picture": {"product": "beyeler-hodler-mont-blanc-50x70", "present": true, "choices": {"frame": "white"}},
-        "floor-lamp": {"present": true, "place": {"left": 0.02, "z": 2.4, "rotation": 90}}
+        "floor-lamp": {"present": true, "place": {"left": 0.02, "z": 2.4, "rotation": 90}},
+        "balcony-table": {"present": true},
+        "ikea-askholmen-chair": {"choices": {"cushion": "none"}},
+        "balcony-chair-1": {"present": true},
+        "balcony-chair-2": {"present": true}
       }
     },
     {
       "id": "outline-pouf",
-      "maker": "Muuto",
+      "maker": "Muuto · IKEA",
       "name": "Outline 2-seater + pouf, Clay 12",
       "summary": "Aluminium legs · grey side table · white chairs",
-      "note": "Outline Soft 2-seater and pouf in Clay 12 on polished aluminium legs: an L with a movable foot end, and an all-grey Soft Side Table in linoleum; two Hodler prints in white frames",
+      "note": "Outline Soft 2-seater and pouf in Clay 12 on polished aluminium legs: an L with a movable foot end, and an all-grey Soft Side Table in linoleum; two Hodler prints in white frames; IKEA's ASKHOLMEN folding table and two chairs on the balcony",
       "pieces": {
         "sofa": {
           "product": "muuto-outline-soft-2-seater",
@@ -174,15 +202,19 @@
         "sill-snake-plant": {"present": true},
         "sofa-picture": {"product": "beyeler-hodler-grammont-60x80", "present": true, "choices": {"frame": "white"}, "place": {"left": 0.002, "z": 1.3, "y": 1.05, "rotation": 90}},
         "table-picture": {"product": "beyeler-hodler-mont-blanc-50x70", "present": true, "choices": {"frame": "white"}},
-        "floor-lamp": {"present": false}
+        "floor-lamp": {"present": false},
+        "balcony-table": {"present": true},
+        "ikea-askholmen-chair": {"choices": {"cushion": "none"}},
+        "balcony-chair-1": {"present": true},
+        "balcony-chair-2": {"present": true}
       }
     },
     {
       "id": "outline-2-seater",
-      "maker": "Muuto",
+      "maker": "Muuto · IKEA",
       "name": "Outline 2-seater, Steelcut 220",
       "summary": "Aluminium legs · oak side table · white chairs",
-      "note": "Outline Soft 2-seater in off-white Steelcut 220 on polished aluminium legs, without the pouf; the oak Soft Side Table on its grey base stands in front of the window-end seat. White shells on oak, warm grey linoleum table on oak, a black Post floor lamp by the sofa; two Hodler prints in white frames",
+      "note": "Outline Soft 2-seater in off-white Steelcut 220 on polished aluminium legs, without the pouf; the oak Soft Side Table on its grey base stands in front of the window-end seat. White shells on oak, warm grey linoleum table on oak, a black Post floor lamp by the sofa; two Hodler prints in white frames; IKEA's ASKHOLMEN folding table and two chairs on the balcony",
       "pieces": {
         "sofa": {
           "product": "muuto-outline-soft-2-seater",
@@ -206,15 +238,19 @@
         "sill-snake-plant": {"present": true},
         "sofa-picture": {"product": "beyeler-hodler-grammont-60x80", "present": true, "choices": {"frame": "white"}, "place": {"left": 0.002, "z": 1.0, "y": 1.05, "rotation": 90}},
         "table-picture": {"product": "beyeler-hodler-mont-blanc-50x70", "present": true, "choices": {"frame": "white"}},
-        "floor-lamp": {"present": true, "place": {"left": 0.02, "z": 2.1, "rotation": 90}}
+        "floor-lamp": {"present": true, "place": {"left": 0.02, "z": 2.1, "rotation": 90}},
+        "balcony-table": {"present": true},
+        "ikea-askholmen-chair": {"choices": {"cushion": "none"}},
+        "balcony-chair-1": {"present": true},
+        "balcony-chair-2": {"present": true}
       }
     },
     {
       "id": "grey",
-      "maker": "Muuto",
+      "maker": "Muuto · IKEA",
       "name": "In Situ 2-seater with chaise, Clay 12",
       "summary": "Black frame · oak side table · white chairs",
-      "note": "In Situ in Clay 12 with its black frame, an oak Soft Side Table on its pale grey base, white shells on oak, warm grey linoleum table, a black Post floor lamp; two Hodler prints in black frames",
+      "note": "In Situ in Clay 12 with its black frame, an oak Soft Side Table on its pale grey base, white shells on oak, warm grey linoleum table, a black Post floor lamp; two Hodler prints in black frames; IKEA's ASKHOLMEN folding table and two chairs on the balcony",
       "pieces": {
         "sofa": {
           "product": "muuto-in-situ-2-seater-7",
@@ -238,15 +274,19 @@
         "sill-snake-plant": {"present": true},
         "sofa-picture": {"product": "beyeler-hodler-grammont-60x80", "present": true, "choices": {"frame": "black"}, "place": {"left": 0.002, "z": 1.23, "y": 1.05, "rotation": 90}},
         "table-picture": {"product": "beyeler-hodler-mont-blanc-50x70", "present": true, "choices": {"frame": "black"}},
-        "floor-lamp": {"present": true, "place": {"left": 0.02, "z": 2.51, "rotation": 90}}
+        "floor-lamp": {"present": true, "place": {"left": 0.02, "z": 2.51, "rotation": 90}},
+        "balcony-table": {"present": true},
+        "ikea-askholmen-chair": {"choices": {"cushion": "none"}},
+        "balcony-chair-1": {"present": true},
+        "balcony-chair-2": {"present": true}
       }
     },
     {
       "id": "warm-light",
-      "maker": "Muuto",
+      "maker": "Muuto · IKEA",
       "name": "In Situ 2-seater with chaise, Ecriture 210",
       "summary": "Black frame · beige green side table · ochre chairs",
-      "note": "In Situ in sandy Ecriture 210, a beige green Soft Side Table, ochre shells on oak, warm grey linoleum table, a brown green Post floor lamp; two Hodler prints in oak frames",
+      "note": "In Situ in sandy Ecriture 210, a beige green Soft Side Table, ochre shells on oak, warm grey linoleum table, a brown green Post floor lamp; two Hodler prints in oak frames; IKEA's ASKHOLMEN folding table and two chairs with grey-beige KUDDARNA pads on the balcony",
       "pieces": {
         "sofa": {
           "product": "muuto-in-situ-2-seater-7",
@@ -270,7 +310,119 @@
         "sill-snake-plant": {"present": true},
         "sofa-picture": {"product": "beyeler-hodler-grammont-60x80", "present": true, "choices": {"frame": "oak"}, "place": {"left": 0.002, "z": 1.23, "y": 1.05, "rotation": 90}},
         "table-picture": {"product": "beyeler-hodler-mont-blanc-50x70", "present": true, "choices": {"frame": "oak"}},
-        "floor-lamp": {"present": true, "choices": {"color": "02"}, "place": {"left": 0.02, "z": 2.51, "rotation": 90}}
+        "floor-lamp": {"present": true, "choices": {"color": "02"}, "place": {"left": 0.02, "z": 2.51, "rotation": 90}},
+        "balcony-table": {"present": true},
+        "ikea-askholmen-chair": {"choices": {"cushion": "kuddarna"}},
+        "balcony-chair-1": {"present": true},
+        "balcony-chair-2": {"present": true}
+      }
+    },
+    {
+      "id": "layout-heart",
+      "maker": "Muuto · IKEA",
+      "name": "Table under the light · Outline 2-seater, Steelcut 160",
+      "summary": "Dining under the pendant · yoga by the window · castors · ochre chairs",
+      "note": "Layout: the Workshop table stands under the pendant in the middle of the room, the Outline 2-seater (Steelcut 160 sage, black castors) has its back to the west wall at the entry end and sees the door, and the window end stays open for yoga with the west wall as the practice wall. Smoked-oak Soft Side Table on black, ochre Fiber shells on oak with felt glides.",
+      "pieces": {
+        "sofa": {"product": "muuto-outline-soft-2-seater", "choices": {"upholstery": "SA05", "base": "castors"}, "place": {"left": 0.02, "door": 0.15, "rotation": 90}},
+        "pouf": {"present": false},
+        "coffee-table": {"present": true, "choices": {"size": "48R1", "top": "06", "base": "01"}, "place": {"left": 1.2, "door": 0.76, "rotation": 0}},
+        "table": {"choices": {"finish": "02"}, "place": {"x": 2.02, "z": 2.37, "rotation": 90}},
+        "muuto-fiber-side-chair-wood": {"choices": {"shell": "05", "base": "04", "glides": "2"}},
+        "chair-1": {"place": {"x": 1.53, "z": 2.09, "rotation": 90}},
+        "chair-2": {"place": {"x": 1.53, "z": 2.65, "rotation": 90}},
+        "chair-3": {"place": {"x": 2.51, "z": 2.09, "rotation": 270}},
+        "chair-4": {"place": {"x": 2.51, "z": 2.65, "rotation": 270}},
+        "sofa-picture": {"product": "beyeler-hodler-grammont-60x80", "present": true, "place": {"left": 0.002, "z": 3.75, "y": 1.05, "rotation": 90}},
+        "table-picture": {"product": "beyeler-hodler-mont-blanc-50x70", "present": true, "place": {"x": 2.2, "door": 0.002, "y": 1.22, "rotation": 180}},
+        "floor-lamp": {"present": true, "choices": {"color": "01"}, "place": {"left": 0.02, "z": 2.72, "rotation": 90}},
+        "sill-haworthia": {"present": true},
+        "sill-rubber-plant": {"present": true},
+        "sill-snake-plant": {"present": true},
+        "balcony-table": {"present": true},
+        "balcony-chair-1": {"present": true},
+        "balcony-chair-2": {"present": true}
+      }
+    },
+    {
+      "id": "layout-one-wall",
+      "maker": "Muuto · IKEA",
+      "name": "Everything on the left wall · Outline 2-seater + pouf, Clay 12",
+      "summary": "Sofa and pouf as a chaise · dining by the entry · castors · white chairs",
+      "note": "Layout: the Outline 2-seater and its pouf (Clay 12, black castors) make a chaise along the west wall at the window end; the Workshop table and four chairs stay at the entry end of the same wall, 45 cm off the entry wall so a prop cabinet fits beside them. The east wall and the floor in front of the sofa stay free for yoga. Oak Soft Side Table on grey, Natural White shells on oak, felt glides.",
+      "pieces": {
+        "sofa": {"product": "muuto-outline-soft-2-seater", "choices": {"upholstery": "CD12", "base": "castors"}, "place": {"left": 0.02, "window": 0.3, "rotation": 90}},
+        "pouf": {"present": true, "choices": {"upholstery": "CD12", "base": "castors"}, "place": {"left": 0.96, "window": 0.3, "rotation": 90}},
+        "coffee-table": {"present": true, "choices": {"size": "48R1", "top": "05", "base": "02"}, "place": {"left": 1.2, "window": 1.47, "rotation": 0}},
+        "table": {"choices": {"finish": "02"}, "place": {"left": 0.925, "door": 0.45, "rotation": 90}},
+        "muuto-fiber-side-chair-wood": {"choices": {"shell": "04", "base": "04", "glides": "2"}},
+        "chair-1": {"place": {"x": 0.76, "z": 3.37, "rotation": 90}},
+        "chair-2": {"place": {"x": 0.76, "z": 3.93, "rotation": 90}},
+        "chair-3": {"place": {"x": 1.74, "z": 3.37, "rotation": 270}},
+        "chair-4": {"place": {"x": 1.74, "z": 3.93, "rotation": 270}},
+        "sofa-picture": {"product": "beyeler-hodler-grammont-60x80", "present": true, "place": {"left": 0.002, "z": 1.15, "y": 1.05, "rotation": 90}},
+        "table-picture": {"product": "beyeler-hodler-mont-blanc-50x70", "present": true, "place": {"x": 1.25, "door": 0.002, "y": 1.22, "rotation": 180}},
+        "floor-lamp": {"present": true, "choices": {"color": "01"}, "place": {"left": 0.02, "z": 2.2, "rotation": 90}},
+        "sill-haworthia": {"present": true},
+        "sill-rubber-plant": {"present": true},
+        "sill-snake-plant": {"present": true},
+        "balcony-table": {"present": true},
+        "balcony-chair-1": {"present": true},
+        "balcony-chair-2": {"present": true}
+      }
+    },
+    {
+      "id": "layout-window-dining",
+      "maker": "Muuto · IKEA",
+      "name": "Dining at the window · Outline 2-seater, Ecriture 760",
+      "summary": "Table by the window · sofa sees the door · castors · dusty green chairs",
+      "note": "Layout: the Workshop table stands end-on to the window on the west side, chairs on both long sides; the Outline 2-seater (Ecriture 760 dusty blue, black castors) has its back to the west wall at the entry end and faces the door across the room. The east side stays a free lane and practice strip. Oak Soft Side Table on beige green, Dusty Green Fiber shells on oak with felt glides.",
+      "pieces": {
+        "sofa": {"product": "muuto-outline-soft-2-seater", "choices": {"upholstery": "EB17", "base": "castors"}, "place": {"left": 0.02, "door": 0.15, "rotation": 90}},
+        "pouf": {"present": false},
+        "coffee-table": {"present": true, "choices": {"size": "48R1", "top": "05", "base": "03"}, "place": {"left": 1.2, "door": 0.76, "rotation": 0}},
+        "table": {"choices": {"finish": "02"}, "place": {"left": 0.85, "window": 0.2, "rotation": 90}},
+        "muuto-fiber-side-chair-wood": {"choices": {"shell": "02", "base": "04", "glides": "2"}},
+        "chair-1": {"place": {"x": 0.685, "z": 0.57, "rotation": 90}},
+        "chair-2": {"place": {"x": 0.685, "z": 1.13, "rotation": 90}},
+        "chair-3": {"place": {"x": 1.665, "z": 0.57, "rotation": 270}},
+        "chair-4": {"place": {"x": 1.665, "z": 1.13, "rotation": 270}},
+        "sofa-picture": {"product": "beyeler-hodler-grammont-60x80", "present": true, "place": {"left": 0.002, "z": 3.75, "y": 1.05, "rotation": 90}},
+        "table-picture": {"product": "beyeler-hodler-mont-blanc-50x70", "present": true, "place": {"left": 0.002, "z": 0.85, "y": 1.22, "rotation": 90}},
+        "floor-lamp": {"present": true, "choices": {"color": "02"}, "place": {"left": 0.02, "z": 2.72, "rotation": 90}},
+        "sill-haworthia": {"present": true},
+        "sill-rubber-plant": {"present": true},
+        "sill-snake-plant": {"present": true},
+        "balcony-table": {"present": true},
+        "balcony-chair-1": {"present": true},
+        "balcony-chair-2": {"present": true}
+      }
+    },
+    {
+      "id": "layout-view-sofa",
+      "maker": "Muuto · IKEA",
+      "name": "Sofa facing the view · Outline 2-seater + pouf, Ecriture 210",
+      "summary": "Sofa on the entry wall · dining at the window · tall side table · white chairs",
+      "note": "Layout: the Outline 2-seater and pouf (Ecriture 210 sand, black castors) sit on the entry wall, centred on the window, with the pouf as a footstool and a 48 cm Soft Side Table (smoked oak on black) at the arm by the door; the Workshop table stands end-on to the window on the west side. The east side stays free. Natural White Fiber shells on oak, felt glides.",
+      "pieces": {
+        "sofa": {"product": "muuto-outline-soft-2-seater", "choices": {"upholstery": "EB07", "base": "castors"}, "place": {"left": 0.45, "door": 0.02, "rotation": 180}},
+        "pouf": {"present": true, "choices": {"upholstery": "EB07", "base": "castors"}, "place": {"left": 0.75, "door": 1.17, "rotation": 0}},
+        "coffee-table": {"present": true, "choices": {"size": "48R2", "top": "06", "base": "01"}, "place": {"left": 2.2, "door": 0.05, "rotation": 0}},
+        "table": {"choices": {"finish": "02"}, "place": {"left": 0.85, "window": 0.2, "rotation": 90}},
+        "muuto-fiber-side-chair-wood": {"choices": {"shell": "04", "base": "04", "glides": "2"}},
+        "chair-1": {"place": {"x": 0.685, "z": 0.57, "rotation": 90}},
+        "chair-2": {"place": {"x": 0.685, "z": 1.13, "rotation": 90}},
+        "chair-3": {"place": {"x": 1.665, "z": 0.57, "rotation": 270}},
+        "chair-4": {"place": {"x": 1.665, "z": 1.13, "rotation": 270}},
+        "sofa-picture": {"product": "beyeler-hodler-grammont-60x80", "present": true, "place": {"left": 0.002, "z": 0.85, "y": 1.05, "rotation": 90}},
+        "table-picture": {"product": "beyeler-hodler-mont-blanc-50x70", "present": true, "place": {"x": 1.3, "door": 0.002, "y": 1.22, "rotation": 180}},
+        "floor-lamp": {"present": true, "choices": {"color": "01"}, "place": {"left": 0.15, "door": 0.1, "rotation": 180}},
+        "sill-haworthia": {"present": true},
+        "sill-rubber-plant": {"present": true},
+        "sill-snake-plant": {"present": true},
+        "balcony-table": {"present": true},
+        "balcony-chair-1": {"present": true},
+        "balcony-chair-2": {"present": true}
       }
     }
   ]
