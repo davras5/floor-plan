@@ -186,6 +186,21 @@ try {
   await mouse('mouseReleased', 760, 420);
   if (still !== (await run('JSON.stringify(roomApp.furniture.items.map((i) => [i.x, i.z]))'))) problems.push('view mode: a drag moved furniture');
 
+  // Presets: each one picked from the panel is the one the room then shows, ticked and in the
+  // link, whatever was picked before it (a finish one preset sets mustn't stay for the next).
+  const presetIds = await run('roomApp.furniture.presets.map((p) => p.id)');
+  for (const pid of [...presetIds, presetIds[0]]) {
+    await run(`document.querySelector('#presets-list [data-preset="${pid}"]').click()`);
+    const shown = await run(`(async () => {
+      for (let i = 0; i < 150; i++) {
+        if (roomApp.furniture.currentPreset() === '${pid}' && location.hash === '#preset=${pid}') return true;
+        await new Promise((r) => setTimeout(r, 100));
+      }
+      return (roomApp.furniture.currentPreset() ?? 'Custom') + ' ' + location.hash;
+    })()`);
+    if (shown !== true) problems.push(`presets: picking ${pid} shows ${shown}`);
+  }
+
   // Settings: the gear opens a labelled dialog with focus inside; Esc closes it and focus goes
   // back to the gear; "Show measurements" works; a quality level applies live.
   const key = (k, code = k) => send('Input.dispatchKeyEvent', { type: 'keyDown', key: k, code, windowsVirtualKeyCode: { Escape: 27, ArrowDown: 40, ArrowUp: 38 }[k] ?? 0 })

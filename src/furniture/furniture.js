@@ -573,11 +573,14 @@ export class Furniture {
       if (!p) continue;
       if (item.home.match) item.matching = !p.choices;
       if (p.item && p.item !== item.key) await this.setProduct(item, p.item, p.choices ?? {}, { save: false });
-      else if (p.choices) await this.setChoices(item, p.choices, { save: false });
       else if (item.matching) await this.follow(item);
+      // A finish the preset doesn't name is the default (as currentPreset reads it), not what
+      // the last preset left: the warm preset's oak frames would otherwise stay on.
+      else if (JSON.stringify(normalise(item.options, p.choices)) !== JSON.stringify(item.choices)) await this.setChoices(item, p.choices ?? {}, { save: false });
       if (item.present && p.place) this.placeAt(item, p.place);
       else if (item.present && (p.item || p.present)) this.placeHome(item);
     }
+    this.lastPreset = id;
     this.save();
     this.onChange();
   }
@@ -595,10 +598,12 @@ export class Furniture {
     return colors.filter(Boolean);
   }
 
-  // The preset the room looks like right now, if any.
+  // The preset the room looks like right now, if any. Presets with the same finishes in other
+  // places (the layouts) look alike here, so the one last applied is asked first.
   currentPreset() {
     if (!this.items.length) return null; // not loaded yet
-    return PRESETS.find((preset) => this.items.every((item) => {
+    const last = PRESETS.find((p) => p.id === this.lastPreset);
+    return [...(last ? [last] : []), ...PRESETS].find((preset) => this.items.every((item) => {
       const p = this.presetFor(preset, item);
       if (!p) return true;
       if (p.present != null && p.present !== item.present) return false;
